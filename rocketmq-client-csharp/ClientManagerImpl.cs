@@ -15,26 +15,30 @@
  * limitations under the License.
  */
 
-using System.Threading.Tasks;
+using System.Collections.Concurrent;
+
 using apache.rocketmq.v1;
-using grpc = global::Grpc.Core;
+using Grpc.Net.Client;
 
 namespace org.apache.rocketmq {
-    public class RpcClientImpl {
-        public RpcClientImpl(MessagingService.MessagingServiceClient client) {
-            stub = client;
+    public class ClientManagerImpl : ClientManager {
+
+        public ClientManagerImpl() {
+            rpcClients = new ConcurrentDictionary<string, MessagingService.MessagingServiceClient>();
         }
 
-        public async Task<QueryRouteResponse> queryRoute(QueryRouteRequest request, grpc::CallOptions callOptions) {
-            var call = stub.QueryRouteAsync(request, callOptions);
-            var response = await call.ResponseAsync;
-            var status = call.GetStatus();
-            if (status.StatusCode != grpc.StatusCode.OK) {
-                // Something is wrong, raise an exception here.
+        public MessagingService.MessagingServiceClient getRpcClient(string target) {
+            if (!rpcClients.ContainsKey(target)) {
+                using var channel = GrpcChannel.ForAddress(target);
+                var client = new MessagingService.MessagingServiceClient(channel);
+                if(rpcClients.TryAdd(target, client)) {
+                    return client;
+                }
             }
-            return response;
+            return rpcClients[target];
         }
 
-        private MessagingService.MessagingServiceClient stub;
+        private ConcurrentDictionary<string, MessagingService.MessagingServiceClient> rpcClients;
+
     }
 }

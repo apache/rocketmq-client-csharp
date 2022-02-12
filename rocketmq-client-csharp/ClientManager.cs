@@ -15,8 +15,11 @@
  * limitations under the License.
  */
 
+using apache.rocketmq.v1;
+
 namespace org.apache.rocketmq {
     interface ClientManager {
-        
+        MessagingService.MessagingServiceClient getRpcClient(string target);
+
     }
 }
