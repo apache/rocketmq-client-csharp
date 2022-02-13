@@ -21,7 +21,7 @@ namespace org.apache.rocketmq {
 
     public class TopicRouteData : IEquatable<TopicRouteData> {
 
-        TopicRouteData(List<Partition> partitions) {
+        public TopicRouteData(List<Partition> partitions) {
             this.partitions = partitions;
             this.partitions.Sort();
         }

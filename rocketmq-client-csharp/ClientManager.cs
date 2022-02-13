@@ -19,26 +19,53 @@ using System.Collections.Concurrent;
 
 using apache.rocketmq.v1;
 using Grpc.Net.Client;
+using System;
+using System.Threading.Tasks;
+using grpc = global::Grpc.Core;
+using System.Collections.Generic;
 
 namespace org.apache.rocketmq {
     public class ClientManager : IClientManager {
 
         public ClientManager() {
-            rpcClients = new ConcurrentDictionary<string, MessagingService.MessagingServiceClient>();
+            rpcClients = new ConcurrentDictionary<string, RpcClient>();
         }
 
-        public MessagingService.MessagingServiceClient getRpcClient(string target) {
+        public IRpcClient getRpcClient(string target) {
             if (!rpcClients.ContainsKey(target)) {
                 using var channel = GrpcChannel.ForAddress(target);
                 var client = new MessagingService.MessagingServiceClient(channel);
-                if(rpcClients.TryAdd(target, client)) {
-                    return client;
+                var rpcClient = new RpcClient(client);
+                if(rpcClients.TryAdd(target, rpcClient)) {
+                    return rpcClient;
                 }
             }
             return rpcClients[target];
         }
 
-        private ConcurrentDictionary<string, MessagingService.MessagingServiceClient> rpcClients;
+        public async Task<TopicRouteData> resolveRoute(string target, grpc::Metadata metadata, QueryRouteRequest request, TimeSpan timeout) {
+            var rpcClient = getRpcClient(target);
+            var callOptions = new grpc::CallOptions();
+            callOptions.WithDeadline(DateTime.Now.Add(timeout));
+            var queryRouteResponse = await rpcClient.queryRoute(request, callOptions);
+
+            if (queryRouteResponse.Common.Status.Code != ((int)Google.Rpc.Code.Ok)) {
+                // Raise an application layer exception
+
+            }
+
+            var partitions = new List<Partition>();
+            // Translate protobuf object to domain specific one
+            foreach (var partition in queryRouteResponse.Partitions) {
+                
+
+            } 
+
+            var topicRouteData = new TopicRouteData(partitions);
+            return topicRouteData;
+        }
+
+        private ConcurrentDictionary<string, RpcClient> rpcClients;
 
     }
 }

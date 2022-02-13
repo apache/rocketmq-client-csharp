@@ -16,10 +16,15 @@
  */
 
 using apache.rocketmq.v1;
+using System.Threading.Tasks;
+using System;
+using grpc = global::Grpc.Core;
 
 namespace org.apache.rocketmq {
     public interface IClientManager {
-        MessagingService.MessagingServiceClient getRpcClient(string target);
+        IRpcClient getRpcClient(string target);
+
+        Task<TopicRouteData> resolveRoute(string target, grpc::Metadata metadata, QueryRouteRequest request, TimeSpan timeout);
 
     }
 }

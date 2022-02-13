@@ -30,7 +30,7 @@ namespace org.apache.rocketmq {
             var response = await call.ResponseAsync;
             var status = call.GetStatus();
             if (status.StatusCode != grpc.StatusCode.OK) {
-                // Something is wrong, raise an exception here.
+                //TODO: Something is wrong, raise an exception here.
             }
             return response;
         }
