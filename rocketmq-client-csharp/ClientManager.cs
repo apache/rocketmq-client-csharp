@@ -15,11 +15,30 @@
  * limitations under the License.
  */
 
+using System.Collections.Concurrent;
+
 using apache.rocketmq.v1;
+using Grpc.Net.Client;
 
 namespace org.apache.rocketmq {
-    interface ClientManager {
-        MessagingService.MessagingServiceClient getRpcClient(string target);
+    public class ClientManager : IClientManager {
+
+        public ClientManager() {
+            rpcClients = new ConcurrentDictionary<string, MessagingService.MessagingServiceClient>();
+        }
+
+        public MessagingService.MessagingServiceClient getRpcClient(string target) {
+            if (!rpcClients.ContainsKey(target)) {
+                using var channel = GrpcChannel.ForAddress(target);
+                var client = new MessagingService.MessagingServiceClient(channel);
+                if(rpcClients.TryAdd(target, client)) {
+                    return client;
+                }
+            }
+            return rpcClients[target];
+        }
+
+        private ConcurrentDictionary<string, MessagingService.MessagingServiceClient> rpcClients;
 
     }
 }

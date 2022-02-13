@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -14,16 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-using System;
+
 using System.Threading.Tasks;
 using apache.rocketmq.v1;
 using grpc = global::Grpc.Core;
 
-namespace org.apache.rocketmq
-{
-    public interface RpcClient
-    {
-     Task<QueryRouteResponse> queryRoute(QueryRouteRequest request, grpc::CallOptions callOptions);
+namespace org.apache.rocketmq {
+    public class RpcClient : IRpcClient {
+        public RpcClient(MessagingService.MessagingServiceClient client) {
+            stub = client;
+        }
 
+        public async Task<QueryRouteResponse> queryRoute(QueryRouteRequest request, grpc::CallOptions callOptions) {
+            var call = stub.QueryRouteAsync(request, callOptions);
+            var response = await call.ResponseAsync;
+            var status = call.GetStatus();
+            if (status.StatusCode != grpc.StatusCode.OK) {
+                // Something is wrong, raise an exception here.
+            }
+            return response;
+        }
+
+        private MessagingService.MessagingServiceClient stub;
     }
 }
