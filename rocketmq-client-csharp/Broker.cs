@@ -15,8 +15,10 @@
  * limitations under the License.
  */
 
+using System;
+
 namespace org.apache.rocketmq {
-    public class Broker {
+    public class Broker : IComparable<Broker>, IEquatable<Broker> {
 
         public Broker(string name, int id, ServiceAddress address) {
             this.name = name;
@@ -37,6 +39,30 @@ namespace org.apache.rocketmq {
         private ServiceAddress address;
         public ServiceAddress Address {
             get { return address; }
+        }
+
+        public int CompareTo(Broker other) {
+            if (0 != name.CompareTo(other.name)) {
+                return name.CompareTo(other.name);
+            }
+
+            return id.CompareTo(other.id);
+        }
+
+        public bool Equals(Broker other) {
+            return name.Equals(other.name) && id.Equals(other.id);
+        }
+
+        public override bool Equals(Object other) {
+            if (!(other is Broker)) {
+                return false;
+            }
+            return Equals(other as Broker);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(name, id);
         }
     }
 }

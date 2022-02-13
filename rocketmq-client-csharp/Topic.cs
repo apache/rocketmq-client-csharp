@@ -15,8 +15,10 @@
  * limitations under the License.
  */
 
+using System;
+
 namespace org.apache.rocketmq {
-    public class Topic {
+    public class Topic : IComparable<Topic>, IEquatable<Topic> {
         public Topic(string resource_namespace, string name) {
             resourceNamespace = resource_namespace;
             this.name = name;
@@ -31,5 +33,34 @@ namespace org.apache.rocketmq {
         public string Name {
             get { return name; }
         }
+
+        public int CompareTo(Topic other) {
+            if (0 != resourceNamespace.CompareTo(other.resourceNamespace)) {
+                return resourceNamespace.CompareTo(other.resourceNamespace);
+            }
+
+            if (0 != name.CompareTo(other.name)) {
+                return name.CompareTo(other.name);
+            }
+
+            return 0;
+        }
+
+        public bool Equals(Topic other) {
+            return resourceNamespace.Equals(other.resourceNamespace) && name.Equals(other.name);
+        }
+
+        public override bool Equals(Object other) {
+            if (!(other is Topic)) {
+                return false;
+            }
+            return Equals(other as Topic);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(resourceNamespace, name);
+        }
+
     }
 }

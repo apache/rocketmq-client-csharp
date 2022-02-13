@@ -14,9 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+using System;
 
 namespace org.apache.rocketmq {
-    public class Partition {
+    
+    public class Partition : IEquatable<Partition>, IComparable<Partition> {
 
         public Partition(Topic topic, Broker broker, int id, Permission permission) {
             this.topic = topic;
@@ -45,5 +47,39 @@ namespace org.apache.rocketmq {
             get { return permission; }
         }
 
+        public bool Equals(Partition other) {
+            return topic.Equals(other.topic) 
+                && broker.Equals(other.broker) 
+                && id.Equals(other.id) 
+                && permission == other.permission;
+        }
+
+        public override bool Equals(Object other) {
+            if (!(other is Partition)) {
+                return false;
+            }
+            return Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(topic, broker, id, permission);
+        }
+
+        public int CompareTo(Partition other) {
+            if (0 != topic.CompareTo(other.topic)) {
+                return topic.CompareTo(other.topic);
+            }
+
+            if (0 != broker.CompareTo(other.broker)) {
+                return broker.CompareTo(other.broker);
+            }
+
+            if (0 != id.CompareTo(other.id)) {
+                return id.CompareTo(other.id);
+            }
+
+            return permission.CompareTo(other.permission);
+        }
     }
 }
