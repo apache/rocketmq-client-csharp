@@ -15,12 +15,52 @@
  * limitations under the License.
  */
 using System;
+using System.Text;
 using grpc = global::Grpc.Core;
+using System.Security.Cryptography;
 
 namespace org.apache.rocketmq {
     public class Signature {
         public static void sign(IClientConfig clientConfig, grpc::Metadata metadata) {
-            
+            metadata.Add(MetadataConstants.LANGUAGE_KEY, "C#");
+            metadata.Add(MetadataConstants.CLIENT_VERSION_KEY, "5.0.0");
+            if (!String.IsNullOrEmpty(clientConfig.tenantId())) {
+                metadata.Add(MetadataConstants.TENANT_ID_KEY, clientConfig.tenantId());
+            }
+
+            if (!String.IsNullOrEmpty(clientConfig.resourceNamespace())) {
+                metadata.Add(MetadataConstants.NAMESPACE_KEY, clientConfig.resourceNamespace());
+            }
+
+            string time = DateTime.Now.ToString(MetadataConstants.DATE_TIME_FORMAT);
+            metadata.Add(MetadataConstants.DATE_TIME_KEY, time);
+
+            if (null != clientConfig.credentialsProvider()) {
+                var credentials = clientConfig.credentialsProvider().getCredentials();
+                if (null == credentials || credentials.expired()) {
+                    return;
+                }
+
+                if (!String.IsNullOrEmpty(credentials.SessionToken)) {
+                    metadata.Add(MetadataConstants.STS_SESSION_TOKEN, credentials.SessionToken);
+                }
+
+                byte[] secretData = Encoding.ASCII.GetBytes(credentials.AccessSecret);
+                byte[] data = Encoding.ASCII.GetBytes(time);
+                HMACSHA1 signer = new HMACSHA1(secretData);
+                byte[] digest = signer.ComputeHash(data);
+                string hmac = BitConverter.ToString(digest);
+                string authorization = string.Format("{0} {1}={2}/{3}/{4}, {5}={6}, {7}={8}", 
+                    MetadataConstants.ALGORITHM_KEY,
+                    MetadataConstants.CREDENTIAL_KEY,
+                    credentials.AccessKey,
+                    clientConfig.region(),
+                    clientConfig.serviceName(),
+                    MetadataConstants.SIGNED_HEADERS_KEY,
+                    MetadataConstants.DATE_TIME_KEY,
+                    MetadataConstants.SIGNATURE_KEY,
+                    hmac);
+            }
         }
     }
 }

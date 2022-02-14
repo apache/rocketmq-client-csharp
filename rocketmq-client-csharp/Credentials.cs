@@ -55,7 +55,7 @@ namespace org.apache.rocketmq {
         }
 
         private string sessionToken;
-        public string SessionToken{
+        public string SessionToken {
             get { return sessionToken; }
         }
 

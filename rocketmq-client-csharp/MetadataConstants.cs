@@ -28,7 +28,7 @@ namespace org.apache.rocketmq {
         public const string CREDENTIAL_KEY = "Credential";
         public const string SIGNED_HEADERS_KEY = "SignedHeaders";
         public const string SIGNATURE_KEY = "Signature";
-        public const string DATE_TIME_FORMAT = "%Y%m%dT%H%M%SZ";
+        public const string DATE_TIME_FORMAT = "yyyyMMddTHHmmssZ";
         public const string LANGUAGE_KEY = "x-mq-language";
         public const string CLIENT_VERSION_KEY = "x-mq-client-version";
         public const string PROTOCOL_VERSION_KEY = "x-mq-protocol-version";
