@@ -17,7 +17,7 @@
 
 using System.Collections.Concurrent;
 
-using apache.rocketmq.v1;
+using rmq = global::apache.rocketmq.v1;
 using Grpc.Net.Client;
 using System;
 using System.Threading.Tasks;
@@ -34,7 +34,7 @@ namespace org.apache.rocketmq {
         public IRpcClient getRpcClient(string target) {
             if (!rpcClients.ContainsKey(target)) {
                 using var channel = GrpcChannel.ForAddress(target);
-                var client = new MessagingService.MessagingServiceClient(channel);
+                var client = new rmq.MessagingService.MessagingServiceClient(channel);
                 var rpcClient = new RpcClient(client);
                 if(rpcClients.TryAdd(target, rpcClient)) {
                     return rpcClient;
@@ -43,10 +43,11 @@ namespace org.apache.rocketmq {
             return rpcClients[target];
         }
 
-        public async Task<TopicRouteData> resolveRoute(string target, grpc::Metadata metadata, QueryRouteRequest request, TimeSpan timeout) {
+        public async Task<TopicRouteData> resolveRoute(string target, grpc::Metadata metadata, rmq.QueryRouteRequest request, TimeSpan timeout) {
             var rpcClient = getRpcClient(target);
             var callOptions = new grpc::CallOptions();
-            callOptions.WithDeadline(DateTime.Now.Add(timeout));
+            callOptions.WithDeadline(DateTime.Now.Add(timeout))
+                .WithHeaders(metadata);
             var queryRouteResponse = await rpcClient.queryRoute(request, callOptions);
 
             if (queryRouteResponse.Common.Status.Code != ((int)Google.Rpc.Code.Ok)) {
@@ -56,10 +57,58 @@ namespace org.apache.rocketmq {
 
             var partitions = new List<Partition>();
             // Translate protobuf object to domain specific one
-            foreach (var partition in queryRouteResponse.Partitions) {
-                
+            foreach (var partition in queryRouteResponse.Partitions)
+            {
+                var topic = new Topic(partition.Topic.ResourceNamespace, partition.Topic.Name);
+                var id = partition.Id;
+                Permission permission = Permission.READ_WRITE;
+                switch (partition.Permission) {
+                    case rmq.Permission.None:
+                    {
+                        permission = Permission.NONE;
+                        break;
+                    }
+                    case rmq.Permission.Read:
+                    {
+                        permission = Permission.READ;
+                        break;
+                    }
+                    case rmq.Permission.Write:
+                    {
+                        permission = Permission.WRITE;
+                        break;
+                    }
+                    case rmq.Permission.ReadWrite:
+                    {
+                        permission = Permission.READ_WRITE;
+                        break;
+                    }
+                }
 
-            } 
+                AddressScheme scheme = AddressScheme.IPv4;
+                switch(partition.Broker.Endpoints.Scheme) {
+                    case rmq.AddressScheme.Ipv4: {
+                        scheme = AddressScheme.IPv4;
+                        break;
+                    }
+                    case rmq.AddressScheme.Ipv6: {
+                        scheme = AddressScheme.IPv6;
+                        break;
+                    }
+                    case rmq.AddressScheme.DomainName: {
+                        scheme = AddressScheme.DOMAIN_NAME;
+                        break;
+                    }
+                }
+
+                List<Address> addresses = new List<Address>();
+                foreach(var item in partition.Broker.Endpoints.Addresses) {
+                    addresses.Add(new Address(item.Host, item.Port));
+                }
+                ServiceAddress serviceAddress = new ServiceAddress(scheme, addresses);
+                Broker broker = new Broker(partition.Broker.Name, id, serviceAddress);
+                partitions.Add(new Partition(topic, broker, id, permission));
+            }
 
             var topicRouteData = new TopicRouteData(partitions);
             return topicRouteData;
