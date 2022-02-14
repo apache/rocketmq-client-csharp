@@ -28,6 +28,12 @@ namespace examples
         static void Main(string[] args)
         {
             Console.WriteLine("Hello World!");
+
+            string accessKey = "key";
+            string accessSecret = "secret";
+            var credentials = new org.apache.rocketmq.StaticCredentialsProvider(accessKey, accessSecret).getCredentials();
+            bool expired = credentials.expired();
+
             int workerThreads;
             int completionPortThreads;
             ThreadPool.GetMaxThreads(out workerThreads, out completionPortThreads);
