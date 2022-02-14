@@ -14,6 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+using System;
+
 namespace org.apache.rocketmq {
     public interface IClientConfig {
         string region();
@@ -22,7 +24,18 @@ namespace org.apache.rocketmq {
 
         string resourceNamespace();
 
-        
+        ICredentialsProvider credentialsProvider();
 
+        string tenantId();
+
+        TimeSpan getIoTimeout();
+
+        TimeSpan getLongPollingTimeout();
+
+        string getGroupName();
+
+        string clientId();
+
+        bool isTracingEnabled();
     }
 }
