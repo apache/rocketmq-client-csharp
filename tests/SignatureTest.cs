@@ -14,18 +14,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- using Microsoft.VisualStudio.TestTools.UnitTesting;
- using grpc = global::Grpc.Core;
-
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using grpc = global::Grpc.Core;
+using Moq;
+using System;
 
 namespace org.apache.rocketmq {
 
     [TestClass]
     public class SignatureTest {
-        
+
         [TestMethod]
-        public void testSign() {
-            // Signature.sign()
+        public void testSign()
+        {
+            var mock = new Mock<IClientConfig>();
+            mock.Setup(x => x.getGroupName()).Returns("G1");
+            mock.Setup(x => x.tenantId()).Returns("Tenant-id");
+            mock.Setup(x => x.resourceNamespace()).Returns("mq:arn:test:");
+            mock.Setup(x => x.serviceName()).Returns("mq");
+            mock.Setup(x => x.region()).Returns("cn-hangzhou");
+            
+            string accessKey = "key";
+            string accessSecret = "secret";
+            var credentialsProvider = new StaticCredentialsProvider(accessKey, accessSecret);
+            mock.Setup(x => x.credentialsProvider()).Returns(credentialsProvider);
+
+            var metadata = new grpc::Metadata();
+            Signature.sign(mock.Object, metadata);
+            Assert.IsNotNull(metadata.Get(MetadataConstants.AUTHORIZATION));
         }
     }
 

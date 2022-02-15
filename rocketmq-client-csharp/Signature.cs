@@ -49,7 +49,7 @@ namespace org.apache.rocketmq {
                 byte[] data = Encoding.ASCII.GetBytes(time);
                 HMACSHA1 signer = new HMACSHA1(secretData);
                 byte[] digest = signer.ComputeHash(data);
-                string hmac = BitConverter.ToString(digest);
+                string hmac = BitConverter.ToString(digest).Replace("-", "");
                 string authorization = string.Format("{0} {1}={2}/{3}/{4}, {5}={6}, {7}={8}", 
                     MetadataConstants.ALGORITHM_KEY,
                     MetadataConstants.CREDENTIAL_KEY,
@@ -60,6 +60,7 @@ namespace org.apache.rocketmq {
                     MetadataConstants.DATE_TIME_KEY,
                     MetadataConstants.SIGNATURE_KEY,
                     hmac);
+                metadata.Add(MetadataConstants.AUTHORIZATION, authorization);
             }
         }
     }
