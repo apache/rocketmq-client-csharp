@@ -28,18 +28,25 @@ namespace org.apache.rocketmq {
         
         [TestMethod]
         public void testResolveRoute() {
-            string topic = "TopicTest";
+            string topic = "cpp_sdk_standard";
             string resourceNamespace = "MQ_INST_1080056302921134_BXuIbML7";
             var request = new rmq.QueryRouteRequest();
             request.Topic = new rmq.Resource();
             request.Topic.ResourceNamespace = resourceNamespace;
             request.Topic.Name = topic;
+            request.Endpoints = new rmq.Endpoints();
+            request.Endpoints.Scheme = rmq.AddressScheme.Ipv4;
+            var address = new rmq.Address();
+            address.Host = "116.62.231.199";
+            address.Port = 80;
+            request.Endpoints.Addresses.Add(address);
+
             var metadata = new grpc::Metadata();
             var clientConfig = new ClientConfig();
             var credentialsProvider = new ConfigFileCredentialsProvider();
             clientConfig.CredentialsProvider = credentialsProvider;
             clientConfig.ResourceNamespace = "MQ_INST_1080056302921134_BXuIbML7";
-            clientConfig.Region = "cn-hangzhou";
+            clientConfig.Region = "cn-hangzhou-pre";
             Signature.sign(clientConfig, metadata);
             var clientManager = new ClientManager();
             string target = "https://116.62.231.199:80";
