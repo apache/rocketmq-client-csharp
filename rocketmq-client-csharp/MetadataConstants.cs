@@ -18,7 +18,7 @@
 using System;
 
 namespace org.apache.rocketmq {
-    class MetadataConstants {
+    public class MetadataConstants {
         public const string TENANT_ID_KEY = "x-mq-tenant-id";
         public const string NAMESPACE_KEY = "x-mq-namespace";
         public const string AUTHORIZATION = "authorization";
