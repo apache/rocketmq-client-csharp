@@ -18,6 +18,8 @@ using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using rmq = apache.rocketmq.v1;
 using grpc = global::Grpc.Core;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace org.apache.rocketmq {
 
@@ -25,26 +27,24 @@ namespace org.apache.rocketmq {
     public class ClientManagerTest {
         
         [TestMethod]
-        public void testQueryRoute() {
-
+        public void testResolveRoute() {
             string topic = "TopicTest";
-            string resourceNamespace = "arn";
-            var request = new rmq::QueryRouteRequest();
-            request.Topic.Name = topic;
+            string resourceNamespace = "MQ_INST_1080056302921134_BXuIbML7";
+            var request = new rmq.QueryRouteRequest();
+            request.Topic = new rmq.Resource();
             request.Topic.ResourceNamespace = resourceNamespace;
-
+            request.Topic.Name = topic;
             var metadata = new grpc::Metadata();
             var clientConfig = new ClientConfig();
-
-            string accessKey = "";
-            string accessSecret = "";
-            
-
-
+            var credentialsProvider = new ConfigFileCredentialsProvider();
+            clientConfig.CredentialsProvider = credentialsProvider;
+            clientConfig.ResourceNamespace = "MQ_INST_1080056302921134_BXuIbML7";
+            clientConfig.Region = "cn-hangzhou";
+            Signature.sign(clientConfig, metadata);
             var clientManager = new ClientManager();
-            
-
-
+            string target = "https://116.62.231.199:80";
+            var topicRouteData = clientManager.resolveRoute(target, metadata, request, TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
+            Console.WriteLine(topicRouteData);
         }
     }
 }

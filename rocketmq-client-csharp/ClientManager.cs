@@ -23,6 +23,10 @@ using System;
 using System.Threading.Tasks;
 using grpc = global::Grpc.Core;
 using System.Collections.Generic;
+using Grpc.Core.Interceptors;
+using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
+using Google.Protobuf.WellKnownTypes;
 
 namespace org.apache.rocketmq {
     public class ClientManager : IClientManager {
@@ -33,8 +37,11 @@ namespace org.apache.rocketmq {
 
         public IRpcClient getRpcClient(string target) {
             if (!rpcClients.ContainsKey(target)) {
-                using var channel = GrpcChannel.ForAddress(target);
-                var client = new rmq.MessagingService.MessagingServiceClient(channel);
+                var channel = GrpcChannel.ForAddress(target, new GrpcChannelOptions {
+                    HttpHandler = createHttpHandler()
+                });
+                var invoker = channel.Intercept(new ClientLoggerInterceptor());
+                var client = new rmq.MessagingService.MessagingServiceClient(invoker);
                 var rpcClient = new RpcClient(client);
                 if(rpcClients.TryAdd(target, rpcClient)) {
                     return rpcClient;
@@ -43,11 +50,16 @@ namespace org.apache.rocketmq {
             return rpcClients[target];
         }
 
+        private static HttpClientHandler createHttpHandler() {
+            var handler = new HttpClientHandler();
+            handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => { return true; };
+            return handler;
+        }
+
         public async Task<TopicRouteData> resolveRoute(string target, grpc::Metadata metadata, rmq.QueryRouteRequest request, TimeSpan timeout) {
             var rpcClient = getRpcClient(target);
-            var callOptions = new grpc::CallOptions();
-            callOptions.WithDeadline(DateTime.Now.Add(timeout))
-                .WithHeaders(metadata);
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new grpc::CallOptions(metadata, deadline);
             var queryRouteResponse = await rpcClient.queryRoute(request, callOptions);
 
             if (queryRouteResponse.Common.Status.Code != ((int)Google.Rpc.Code.Ok)) {
