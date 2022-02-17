@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+using System.Threading.Tasks;
+
 namespace org.apache.rocketmq
 {
     public interface IClient : IClientConfig
@@ -24,7 +26,7 @@ namespace org.apache.rocketmq
 
         void healthCheck();
 
-        void notifyClientTermination();
+        Task<bool> notifyClientTermination();
 
     }
 }

@@ -42,9 +42,11 @@ namespace org.apache.rocketmq {
             return response;
         }
 
-        public NotifyClientTerminationResponse notifyClientTermination(NotifyClientTerminationRequest request, grpc::CallOptions callOptions)
+        public async Task<NotifyClientTerminationResponse> notifyClientTermination(NotifyClientTerminationRequest request, grpc::CallOptions callOptions)
         {
-            return stub.NotifyClientTermination(request, callOptions);
+            var call = stub.NotifyClientTerminationAsync(request, callOptions);
+            var response = await call.ResponseAsync;
+            return response;
         }
 
         private MessagingService.MessagingServiceClient stub;

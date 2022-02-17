@@ -27,7 +27,6 @@ namespace org.apache.rocketmq
 
         Task<HeartbeatResponse> heartbeat(HeartbeatRequest request, grpc::CallOptions callOptions);
 
-        NotifyClientTerminationResponse notifyClientTermination(NotifyClientTerminationRequest request, grpc::CallOptions callOptions);
-
+        Task<NotifyClientTerminationResponse> notifyClientTermination(NotifyClientTerminationRequest request, grpc::CallOptions callOptions);
     }
 }
