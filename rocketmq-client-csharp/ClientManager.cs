@@ -156,6 +156,15 @@ namespace org.apache.rocketmq {
             return response.Common.Status.Code == (int)Google.Rpc.Code.Ok;
         }
 
+        public async Task<rmq::SendMessageResponse> sendMessage(string target, grpc::Metadata metadata, rmq::SendMessageRequest request, TimeSpan timeout)
+        {
+            var rpcClient = getRpcClient(target);
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new grpc::CallOptions(metadata, deadline);
+            var response = await rpcClient.sendMessage(request, callOptions);
+            return response;
+        }
+
         public async Task<Boolean> notifyClientTermination(string target, grpc::Metadata metadata, rmq::NotifyClientTerminationRequest request, TimeSpan timeout)
         {
             var rpcClient = getRpcClient(target);

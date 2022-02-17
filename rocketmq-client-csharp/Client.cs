@@ -39,7 +39,7 @@ namespace org.apache.rocketmq
             this.updateTopicRouteCTS = new CancellationTokenSource();
         }
 
-        public void start()
+        public virtual void start()
         {
             schedule(async () =>
             {
@@ -54,7 +54,7 @@ namespace org.apache.rocketmq
 
         }
 
-        public void shutdown()
+        public virtual void shutdown()
         {
             updateTopicRouteCTS.Cancel();
             nameServerResolverCTS.Cancel();
@@ -249,7 +249,7 @@ namespace org.apache.rocketmq
             return new List<string>();
         }
 
-        private IClientManager clientManager;
+        protected IClientManager clientManager;
         private INameServerResolver nameServerResolver;
         private CancellationTokenSource nameServerResolverCTS;
         private List<string> nameServers;

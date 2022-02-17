@@ -17,6 +17,10 @@
 using System;
 using System.Threading.Tasks;
 using rmq = apache.rocketmq.v1;
+using pb = global::Google.Protobuf;
+using grpc = global::Grpc.Core;
+using System.Collections.Generic;
+
 
 namespace org.apache.rocketmq
 {
@@ -26,14 +30,16 @@ namespace org.apache.rocketmq
         {
         }
 
-        public void start()
+        public override void start()
         {
-
+            base.start();
+            // More initalization
         }
 
-        public void shutdown()
+        public override void shutdown()
         {
-
+            // Release local resources
+            base.shutdown();
         }
 
         public override void prepareHeartbeatData(rmq.HeartbeatRequest request)
@@ -43,9 +49,67 @@ namespace org.apache.rocketmq
 
         public async Task<SendResult> send(Message message)
         {
-            string messageId = "msgId";
-            return new SendResult(messageId);
-        }
+            var topicRouteData = await getRouteFor(message.Topic, false);
 
+            var request = new rmq::SendMessageRequest();
+            request.Message = new rmq::Message();
+            request.Message.Body = pb::ByteString.CopyFrom(message.Body);
+            request.Message.Topic = new rmq.Resource();
+            request.Message.Topic.ResourceNamespace = resourceNamespace();
+            request.Message.Topic.Name = message.Topic;
+
+            // User properties
+            foreach (var item in message.UserProperties)
+            {
+                request.Message.UserAttribute.Add(item.Key, item.Value);
+            }
+
+            request.Message.SystemAttribute = new rmq::SystemAttribute();
+            if (!string.IsNullOrEmpty(message.Tag))
+            {
+                request.Message.SystemAttribute.Tag = message.Tag;
+            }
+
+            if (0 != message.Keys.Count)
+            {
+                foreach (var key in message.Keys)
+                {
+                    request.Message.SystemAttribute.Keys.Add(key);
+                }
+            }
+
+            // string target = "https://";
+            List<string> targets = new List<string>();
+            // Select targets from topic route entries
+
+            var metadata = new grpc::Metadata();
+            Signature.sign(this, metadata);
+
+            Exception ex = null;
+
+            foreach (var target in targets)
+            {
+                try
+                {
+                    rmq::SendMessageResponse response = await clientManager.sendMessage(target, metadata, request, getIoTimeout());
+                    if (null != response && (int)global::Google.Rpc.Code.Ok == response.Common.Status.Code)
+                    {
+                        var messageId = response.MessageId;
+                        return new SendResult(messageId);
+                    }
+                }
+                catch (Exception e)
+                {
+                    ex = e;
+                }
+            }
+
+            if (null != ex)
+            {
+                throw ex;
+            }
+
+            throw new Exception("Send message failed");
+        }
     }
 }
