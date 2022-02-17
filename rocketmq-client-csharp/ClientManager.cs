@@ -126,6 +126,29 @@ namespace org.apache.rocketmq {
             return topicRouteData;
         }
 
+        public async Task<Boolean> heartbeat(string target, grpc::Metadata metadata, rmq.HeartbeatRequest request, TimeSpan timeout)
+        {
+            var rpcClient = getRpcClient(target);
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new grpc.CallOptions(metadata, deadline);
+            var response = await rpcClient.heartbeat(request, callOptions);
+            if (null == response)
+            {
+                return false;
+            }
+
+            return response.Common.Status.Code == (int)Google.Rpc.Code.Ok;
+        }
+
+        public bool notifyClientTermination(string target, grpc::Metadata metadata, rmq::NotifyClientTerminationRequest request, TimeSpan timeout)
+        {
+            var rpcClient = getRpcClient(target);
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new grpc::CallOptions(metadata, deadline);
+            rmq::NotifyClientTerminationResponse response = rpcClient.notifyClientTermination(request, callOptions);
+            return response.Common.Status.Code == ((int)Google.Rpc.Code.Ok);
+        }
+
         private ConcurrentDictionary<string, RpcClient> rpcClients;
 
     }

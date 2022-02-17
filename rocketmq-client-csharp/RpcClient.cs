@@ -35,6 +35,18 @@ namespace org.apache.rocketmq {
             return response;
         }
 
+        public async Task<HeartbeatResponse> heartbeat(HeartbeatRequest request, grpc::CallOptions callOptions)
+        {
+            var call = stub.HeartbeatAsync(request, callOptions);
+            var response = await call.ResponseAsync;
+            return response;
+        }
+
+        public NotifyClientTerminationResponse notifyClientTermination(NotifyClientTerminationRequest request, grpc::CallOptions callOptions)
+        {
+            return stub.NotifyClientTermination(request, callOptions);
+        }
+
         private MessagingService.MessagingServiceClient stub;
     }
 }

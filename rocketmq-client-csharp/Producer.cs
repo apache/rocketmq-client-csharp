@@ -14,21 +14,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-using apache.rocketmq.v1;
-using System.Threading.Tasks;
 using System;
-using grpc = global::Grpc.Core;
+using System.Threading.Tasks;
+using rmq = apache.rocketmq.v1;
 
-namespace org.apache.rocketmq {
-    public interface IClientManager {
-        IRpcClient getRpcClient(string target);
+namespace org.apache.rocketmq
+{
+    public class Producer : Client, IProducer
+    {
+        public Producer() : base()
+        {
+        }
 
-        Task<TopicRouteData> resolveRoute(string target, grpc::Metadata metadata, QueryRouteRequest request, TimeSpan timeout);
+        public void start()
+        {
 
-        Task<Boolean> heartbeat(string target, grpc::Metadata metadata, HeartbeatRequest request, TimeSpan timeout);
+        }
 
-        bool notifyClientTermination(string target, grpc::Metadata metadata, NotifyClientTerminationRequest request, TimeSpan timeout);
+        public void shutdown()
+        {
+
+        }
+
+        public override void prepareHeartbeatData(rmq.HeartbeatRequest request)
+        {
+
+        }
+
+        public async Task<SendResult> send(Message message)
+        {
+            string messageId = "msgId";
+            return new SendResult(messageId);
+        }
 
     }
 }
