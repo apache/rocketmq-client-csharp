@@ -15,37 +15,13 @@
  * limitations under the License.
  */
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using rmq = apache.rocketmq.v1;
 
 namespace org.apache.rocketmq
 {
-    public class Producer : Client, IProducer
+    public interface INameServerResolver
     {
-        public Producer(INameServerResolver resolver) : base(resolver)
-        {
-        }
-
-        public void start()
-        {
-
-        }
-
-        public void shutdown()
-        {
-
-        }
-
-        public override void prepareHeartbeatData(rmq.HeartbeatRequest request)
-        {
-
-        }
-
-        public async Task<SendResult> send(Message message)
-        {
-            string messageId = "msgId";
-            return new SendResult(messageId);
-        }
-
+        Task<List<string>> resolveAsync();
     }
 }

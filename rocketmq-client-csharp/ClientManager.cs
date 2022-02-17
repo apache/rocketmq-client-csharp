@@ -20,6 +20,7 @@ using System.Collections.Concurrent;
 using rmq = global::apache.rocketmq.v1;
 using Grpc.Net.Client;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using grpc = global::Grpc.Core;
 using System.Collections.Generic;
@@ -50,9 +51,24 @@ namespace org.apache.rocketmq {
             return rpcClients[target];
         }
 
-        private static HttpClientHandler createHttpHandler() {
-            var handler = new HttpClientHandler();
-            handler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => { return true; };
+        /**
+         * See https://docs.microsoft.com/en-us/aspnet/core/grpc/performance?view=aspnetcore-6.0 for performance consideration and
+         * why parameters are configured this way.
+         */
+        private static HttpMessageHandler createHttpHandler()
+        {
+            var sslOptions = new System.Net.Security.SslClientAuthenticationOptions();
+            // Disable server certificate validation during development phase.
+            // Comment out the following line if server certificate validation is required. 
+            sslOptions.RemoteCertificateValidationCallback = (sender, cert, chain, sslPolicyErrors) => { return true; };
+            var handler = new SocketsHttpHandler
+            {
+                PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+                KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+                KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+                EnableMultipleHttp2Connections = true,
+                SslOptions = sslOptions,
+            };
             return handler;
         }
 
