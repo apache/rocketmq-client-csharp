@@ -47,7 +47,7 @@ namespace org.apache.rocketmq {
         public string targetUrl()
         {
             var addr = address.Addresses[0];
-            return string.Format("https://{}:{}", addr.Host, addr.Port);
+            return string.Format("https://{0}:{1}", addr.Host, addr.Port);
         }
 
         public int CompareTo(Broker other) {

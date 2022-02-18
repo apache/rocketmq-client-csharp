@@ -45,7 +45,7 @@ namespace org.apache.rocketmq {
             var clientConfig = new ClientConfig();
             var credentialsProvider = new ConfigFileCredentialsProvider();
             clientConfig.CredentialsProvider = credentialsProvider;
-            clientConfig.ResourceNamespace = "MQ_INST_1080056302921134_BXuIbML7";
+            clientConfig.ResourceNamespace = resourceNamespace;
             clientConfig.Region = "cn-hangzhou-pre";
             Signature.sign(clientConfig, metadata);
             var clientManager = new ClientManager();

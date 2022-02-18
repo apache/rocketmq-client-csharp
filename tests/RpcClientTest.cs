@@ -15,17 +15,69 @@
  * limitations under the License.
  */
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Grpc.Core.Interceptors;
+using System.Net.Http;
+using Grpc.Net.Client;
+using rmq = global::apache.rocketmq.v1;
+using grpc = global::Grpc.Core;
+using System;
+
 namespace org.apache.rocketmq
 {
     [TestClass]
     public class RpcClientTest
     {
-        [TestMethod]
-        public void testRoute()
+
+
+        [ClassInitialize]
+        public static void SetUp(TestContext context)
         {
+            string target = string.Format("https://{0}:{1}", host, port);
+            var channel = GrpcChannel.ForAddress(target, new GrpcChannelOptions
+            {
+                HttpHandler = ClientManager.createHttpHandler()
+            });
+            var invoker = channel.Intercept(new ClientLoggerInterceptor());
+            var client = new rmq::MessagingService.MessagingServiceClient(invoker);
+            rpcClient = new RpcClient(client);
 
-
+            clientConfig = new ClientConfig();
+            var credentialsProvider = new ConfigFileCredentialsProvider();
+            clientConfig.CredentialsProvider = credentialsProvider;
+            clientConfig.ResourceNamespace = resourceNamespace;
+            clientConfig.Region = "cn-hangzhou-pre";
         }
 
+        [TestMethod]
+        public void testQueryRoute()
+        {
+            var request = new rmq::QueryRouteRequest();
+            request.Topic = new rmq::Resource();
+            request.Topic.ResourceNamespace = resourceNamespace;
+            request.Topic.Name = topic;
+            request.Endpoints = new rmq::Endpoints();
+            request.Endpoints.Scheme = rmq::AddressScheme.Ipv4;
+            var address = new rmq::Address();
+            address.Host = host;
+            address.Port = port;
+            request.Endpoints.Addresses.Add(address);
+
+            var metadata = new grpc::Metadata();
+            Signature.sign(clientConfig, metadata);
+
+            var deadline = DateTime.UtcNow.Add(TimeSpan.FromSeconds(3));
+            var callOptions = new grpc::CallOptions(metadata, deadline);
+            var response = rpcClient.queryRoute(request, callOptions).GetAwaiter().GetResult();
+        }
+
+        private static string resourceNamespace = "MQ_INST_1080056302921134_BXuIbML7";
+
+        private static string topic = "cpp_sdk_standard";
+
+        private static string host = "116.62.231.199";
+        private static int port = 80;
+
+        private static IRpcClient rpcClient;
+        private static ClientConfig clientConfig;
     }
 }

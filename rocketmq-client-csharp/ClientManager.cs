@@ -53,7 +53,7 @@ namespace org.apache.rocketmq {
          * See https://docs.microsoft.com/en-us/aspnet/core/grpc/performance?view=aspnetcore-6.0 for performance consideration and
          * why parameters are configured this way.
          */
-        private static HttpMessageHandler createHttpHandler()
+        public static HttpMessageHandler createHttpHandler()
         {
             var sslOptions = new System.Net.Security.SslClientAuthenticationOptions();
             // Disable server certificate validation during development phase.

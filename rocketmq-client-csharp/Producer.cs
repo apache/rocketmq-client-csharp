@@ -56,7 +56,7 @@ namespace org.apache.rocketmq
                 var topicRouteData = await getRouteFor(message.Topic, false);
                 if (null == topicRouteData || null == topicRouteData.Partitions || 0 == topicRouteData.Partitions.Count)
                 {
-                    throw new TopicRouteException(string.Format("No topic route for {}", message.Topic));
+                    throw new TopicRouteException(string.Format("No topic route for {0}", message.Topic));
                 }
 
                 var loadBalancerItem = new PublishLoadBalancer(topicRouteData);
