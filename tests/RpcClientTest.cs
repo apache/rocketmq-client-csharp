@@ -80,7 +80,6 @@ namespace org.apache.rocketmq
         [TestMethod]
         public void testHeartbeat()
         {
-
             var request = new rmq::HeartbeatRequest();
             request.ClientId = clientId;
             request.ProducerData = new rmq::ProducerData();
@@ -95,6 +94,25 @@ namespace org.apache.rocketmq
             var deadline = DateTime.UtcNow.Add(TimeSpan.FromSeconds(3));
             var callOptions = new grpc::CallOptions(metadata, deadline);
             var response = rpcClient.heartbeat(request, callOptions).GetAwaiter().GetResult();
+        }
+
+        // Remove the Ignore annotation if server has fixed
+        [Ignore]
+        [TestMethod]
+        public void testNotifyClientTermiantion()
+        {
+            var request = new rmq::NotifyClientTerminationRequest();
+            request.ClientId = clientId;
+            request.ProducerGroup = new rmq::Resource();
+            request.ProducerGroup.ResourceNamespace = resourceNamespace;
+            request.ProducerGroup.Name = group;
+
+            var metadata = new grpc::Metadata();
+            Signature.sign(clientConfig, metadata);
+
+            var deadline = DateTime.UtcNow.AddSeconds(3);
+            var callOptions = new grpc::CallOptions(metadata, deadline);
+            var response = rpcClient.notifyClientTermination(request, callOptions).GetAwaiter().GetResult();
         }
 
         private static string resourceNamespace = "MQ_INST_1080056302921134_BXuIbML7";
