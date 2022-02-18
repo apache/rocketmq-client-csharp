@@ -45,7 +45,9 @@ namespace org.apache.rocketmq
         public void testSendMessage()
         {
             var producer = new Producer(resolver, resourceNamespace);
+            producer.start();
 
+            producer.shutdown();
         }
 
         private static string resourceNamespace = "MQ_INST_1080056302921134_BXuIbML7";
