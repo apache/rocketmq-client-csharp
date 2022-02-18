@@ -27,7 +27,7 @@ namespace org.apache.rocketmq
 {
     public class Producer : Client, IProducer
     {
-        public Producer(INameServerResolver resolver) : base(resolver)
+        public Producer(INameServerResolver resolver, string resourceNamespace) : base(resolver, resourceNamespace)
         {
             this.loadBalancer = new ConcurrentDictionary<string, PublishLoadBalancer>();
         }

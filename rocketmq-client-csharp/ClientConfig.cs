@@ -101,7 +101,7 @@ namespace org.apache.rocketmq {
         private string region_ = "cn-hangzhou";
         private string serviceName_ = "ONS";
 
-        private string resourceNamespace_;
+        protected string resourceNamespace_;
 
         private ICredentialsProvider credentialsProvider_;
 

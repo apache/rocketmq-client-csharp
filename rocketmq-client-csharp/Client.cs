@@ -29,10 +29,11 @@ namespace org.apache.rocketmq
     public abstract class Client : ClientConfig, IClient
     {
 
-        public Client(INameServerResolver resolver)
+        public Client(INameServerResolver resolver, string resourceNamespace)
         {
             this.nameServerResolver = resolver;
-            this.clientManager = ClientManagerFactory.getClientManager(resourceNamespace());
+            this.resourceNamespace_ = resourceNamespace;
+            this.clientManager = ClientManagerFactory.getClientManager(resourceNamespace);
             this.nameServerResolverCTS = new CancellationTokenSource();
 
             this.topicRouteTable = new ConcurrentDictionary<string, TopicRouteData>();
