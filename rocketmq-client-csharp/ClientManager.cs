@@ -26,8 +26,6 @@ using grpc = global::Grpc.Core;
 using System.Collections.Generic;
 using Grpc.Core.Interceptors;
 using System.Net.Http;
-using System.Security.Cryptography.X509Certificates;
-using Google.Protobuf.WellKnownTypes;
 
 namespace org.apache.rocketmq {
     public class ClientManager : IClientManager {
@@ -42,7 +40,7 @@ namespace org.apache.rocketmq {
                     HttpHandler = createHttpHandler()
                 });
                 var invoker = channel.Intercept(new ClientLoggerInterceptor());
-                var client = new rmq.MessagingService.MessagingServiceClient(invoker);
+                var client = new rmq::MessagingService.MessagingServiceClient(invoker);
                 var rpcClient = new RpcClient(client);
                 if(rpcClients.TryAdd(target, rpcClient)) {
                     return rpcClient;
@@ -72,7 +70,8 @@ namespace org.apache.rocketmq {
             return handler;
         }
 
-        public async Task<TopicRouteData> resolveRoute(string target, grpc::Metadata metadata, rmq.QueryRouteRequest request, TimeSpan timeout) {
+        public async Task<TopicRouteData> resolveRoute(string target, grpc::Metadata metadata, rmq::QueryRouteRequest request, TimeSpan timeout)
+        {
             var rpcClient = getRpcClient(target);
             var deadline = DateTime.UtcNow.Add(timeout);
             var callOptions = new grpc::CallOptions(metadata, deadline);
@@ -91,22 +90,22 @@ namespace org.apache.rocketmq {
                 var id = partition.Id;
                 Permission permission = Permission.READ_WRITE;
                 switch (partition.Permission) {
-                    case rmq.Permission.None:
+                    case rmq::Permission.None:
                     {
                         permission = Permission.NONE;
                         break;
                     }
-                    case rmq.Permission.Read:
+                    case rmq::Permission.Read:
                     {
                         permission = Permission.READ;
                         break;
                     }
-                    case rmq.Permission.Write:
+                    case rmq::Permission.Write:
                     {
                         permission = Permission.WRITE;
                         break;
                     }
-                    case rmq.Permission.ReadWrite:
+                    case rmq::Permission.ReadWrite:
                     {
                         permission = Permission.READ_WRITE;
                         break;
@@ -115,15 +114,18 @@ namespace org.apache.rocketmq {
 
                 AddressScheme scheme = AddressScheme.IPv4;
                 switch(partition.Broker.Endpoints.Scheme) {
-                    case rmq.AddressScheme.Ipv4: {
+                    case rmq::AddressScheme.Ipv4:
+                        {
                         scheme = AddressScheme.IPv4;
                         break;
                     }
-                    case rmq.AddressScheme.Ipv6: {
+                    case rmq::AddressScheme.Ipv6:
+                        {
                         scheme = AddressScheme.IPv6;
                         break;
                     }
-                    case rmq.AddressScheme.DomainName: {
+                    case rmq::AddressScheme.DomainName:
+                        {
                         scheme = AddressScheme.DOMAIN_NAME;
                         break;
                     }
@@ -142,7 +144,7 @@ namespace org.apache.rocketmq {
             return topicRouteData;
         }
 
-        public async Task<Boolean> heartbeat(string target, grpc::Metadata metadata, rmq.HeartbeatRequest request, TimeSpan timeout)
+        public async Task<Boolean> heartbeat(string target, grpc::Metadata metadata, rmq::HeartbeatRequest request, TimeSpan timeout)
         {
             var rpcClient = getRpcClient(target);
             var deadline = DateTime.UtcNow.Add(timeout);

@@ -30,13 +30,13 @@ namespace org.apache.rocketmq {
         public void testResolveRoute() {
             string topic = "cpp_sdk_standard";
             string resourceNamespace = "MQ_INST_1080056302921134_BXuIbML7";
-            var request = new rmq.QueryRouteRequest();
-            request.Topic = new rmq.Resource();
+            var request = new rmq::QueryRouteRequest();
+            request.Topic = new rmq::Resource();
             request.Topic.ResourceNamespace = resourceNamespace;
             request.Topic.Name = topic;
-            request.Endpoints = new rmq.Endpoints();
-            request.Endpoints.Scheme = rmq.AddressScheme.Ipv4;
-            var address = new rmq.Address();
+            request.Endpoints = new rmq::Endpoints();
+            request.Endpoints.Scheme = rmq::AddressScheme.Ipv4;
+            var address = new rmq::Address();
             address.Host = "116.62.231.199";
             address.Port = 80;
             request.Endpoints.Addresses.Add(address);

@@ -178,13 +178,13 @@ namespace org.apache.rocketmq
             string nameServer = nameServers[currentNameServerIndex];
             var metadata = new grpc.Metadata();
             Signature.sign(this, metadata);
-            var request = new rmq.QueryRouteRequest();
-            request.Topic = new rmq.Resource();
+            var request = new rmq::QueryRouteRequest();
+            request.Topic = new rmq::Resource();
             request.Topic.ResourceNamespace = resourceNamespace();
             request.Topic.Name = topic;
-            request.Endpoints = new rmq.Endpoints();
-            request.Endpoints.Scheme = rmq.AddressScheme.Ipv4;
-            var address = new rmq.Address();
+            request.Endpoints = new rmq::Endpoints();
+            request.Endpoints.Scheme = rmq::AddressScheme.Ipv4;
+            var address = new rmq::Address();
             string[] segments = nameServer.Split(":");
             address.Host = segments[0];
             address.Port = Int32.Parse(segments[1]);
@@ -194,7 +194,7 @@ namespace org.apache.rocketmq
             return topicRouteData;
         }
 
-        public abstract void prepareHeartbeatData(rmq.HeartbeatRequest request);
+        public abstract void prepareHeartbeatData(rmq::HeartbeatRequest request);
 
         public void heartbeat()
         {
@@ -204,7 +204,7 @@ namespace org.apache.rocketmq
                 return;
             }
 
-            var heartbeatRequest = new rmq.HeartbeatRequest();
+            var heartbeatRequest = new rmq::HeartbeatRequest();
             prepareHeartbeatData(heartbeatRequest);
 
             var metadata = new grpc::Metadata();
@@ -219,7 +219,7 @@ namespace org.apache.rocketmq
         public async Task<bool> notifyClientTermination()
         {
             List<string> endpoints = endpointsInUse();
-            var request = new rmq.NotifyClientTerminationRequest();
+            var request = new rmq::NotifyClientTerminationRequest();
             request.ClientId = clientId();
 
             var metadata = new grpc.Metadata();

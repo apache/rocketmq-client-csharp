@@ -42,7 +42,7 @@ namespace org.apache.rocketmq
             base.shutdown();
         }
 
-        public override void prepareHeartbeatData(rmq.HeartbeatRequest request)
+        public override void prepareHeartbeatData(rmq::HeartbeatRequest request)
         {
 
         }
@@ -54,7 +54,7 @@ namespace org.apache.rocketmq
             var request = new rmq::SendMessageRequest();
             request.Message = new rmq::Message();
             request.Message.Body = pb::ByteString.CopyFrom(message.Body);
-            request.Message.Topic = new rmq.Resource();
+            request.Message.Topic = new rmq::Resource();
             request.Message.Topic.ResourceNamespace = resourceNamespace();
             request.Message.Topic.Name = message.Topic;
 
