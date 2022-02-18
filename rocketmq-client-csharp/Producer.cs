@@ -20,6 +20,7 @@ using rmq = apache.rocketmq.v1;
 using pb = global::Google.Protobuf;
 using grpc = global::Grpc.Core;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 
 namespace org.apache.rocketmq
@@ -28,6 +29,7 @@ namespace org.apache.rocketmq
     {
         public Producer(INameServerResolver resolver) : base(resolver)
         {
+            this.loadBalancer = new ConcurrentDictionary<string, PublishLoadBalancer>();
         }
 
         public override void start()
@@ -49,7 +51,19 @@ namespace org.apache.rocketmq
 
         public async Task<SendResult> send(Message message)
         {
-            var topicRouteData = await getRouteFor(message.Topic, false);
+            if (!loadBalancer.ContainsKey(message.Topic))
+            {
+                var topicRouteData = await getRouteFor(message.Topic, false);
+                if (null == topicRouteData || null == topicRouteData.Partitions || 0 == topicRouteData.Partitions.Count)
+                {
+                    throw new TopicRouteException(string.Format("No topic route for {}", message.Topic));
+                }
+
+                var loadBalancerItem = new PublishLoadBalancer(topicRouteData);
+                loadBalancer.TryAdd(message.Topic, loadBalancerItem);
+            }
+
+            var publishLB = loadBalancer[message.Topic];
 
             var request = new rmq::SendMessageRequest();
             request.Message = new rmq::Message();
@@ -80,7 +94,11 @@ namespace org.apache.rocketmq
 
             // string target = "https://";
             List<string> targets = new List<string>();
-            // Select targets from topic route entries
+            List<Partition> candidates = publishLB.select(message.MaxAttemptTimes);
+            foreach (var partition in candidates)
+            {
+                targets.Add(partition.Broker.targetUrl());
+            }
 
             var metadata = new grpc::Metadata();
             Signature.sign(this, metadata);
@@ -111,5 +129,7 @@ namespace org.apache.rocketmq
 
             throw new Exception("Send message failed");
         }
+
+        private ConcurrentDictionary<string, PublishLoadBalancer> loadBalancer;
     }
 }

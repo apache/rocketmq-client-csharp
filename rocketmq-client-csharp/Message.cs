@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-using System;
 using System.Collections.Generic;
 namespace org.apache.rocketmq
 {
@@ -29,6 +28,7 @@ namespace org.apache.rocketmq
         }
 
         public Message(string topic, string tag, List<string> keys, byte[] body) {
+            this.maxAttemptTimes = 3;
             this.topic = topic;
             this.tag = tag;
             this.keys = keys;
@@ -74,6 +74,12 @@ namespace org.apache.rocketmq
             set { this.systemProperties = value; }
         }
 
+        private int maxAttemptTimes;
+        public int MaxAttemptTimes
+        {
+            get { return maxAttemptTimes; }
+            set { maxAttemptTimes = value; }
+        }
     }
 
 }
