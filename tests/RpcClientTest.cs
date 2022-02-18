@@ -48,6 +48,12 @@ namespace org.apache.rocketmq
             clientConfig.Region = "cn-hangzhou-pre";
         }
 
+        [ClassCleanup]
+        public static void TearDown()
+        {
+
+        }
+
         [TestMethod]
         public void testQueryRoute()
         {
@@ -70,9 +76,33 @@ namespace org.apache.rocketmq
             var response = rpcClient.queryRoute(request, callOptions).GetAwaiter().GetResult();
         }
 
+
+        [TestMethod]
+        public void testHeartbeat()
+        {
+
+            var request = new rmq::HeartbeatRequest();
+            request.ClientId = clientId;
+            request.ProducerData = new rmq::ProducerData();
+            request.ProducerData.Group = new rmq::Resource();
+            request.ProducerData.Group.ResourceNamespace = resourceNamespace;
+            request.ProducerData.Group.Name = topic;
+            request.FifoFlag = false;
+
+            var metadata = new grpc::Metadata();
+            Signature.sign(clientConfig, metadata);
+
+            var deadline = DateTime.UtcNow.Add(TimeSpan.FromSeconds(3));
+            var callOptions = new grpc::CallOptions(metadata, deadline);
+            var response = rpcClient.heartbeat(request, callOptions).GetAwaiter().GetResult();
+        }
+
         private static string resourceNamespace = "MQ_INST_1080056302921134_BXuIbML7";
 
         private static string topic = "cpp_sdk_standard";
+
+        private static string clientId = "C001";
+        private static string group = "GID_cpp_sdk_standard";
 
         private static string host = "116.62.231.199";
         private static int port = 80;
