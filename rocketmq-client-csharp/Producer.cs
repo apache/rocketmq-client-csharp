@@ -79,6 +79,7 @@ namespace org.apache.rocketmq
             }
 
             request.Message.SystemAttribute = new rmq::SystemAttribute();
+            request.Message.SystemAttribute.MessageId = message.MessageId;
             if (!string.IsNullOrEmpty(message.Tag))
             {
                 request.Message.SystemAttribute.Tag = message.Tag;

@@ -16,6 +16,7 @@
  */
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
+using System;
 
 namespace org.apache.rocketmq
 {
@@ -45,8 +46,14 @@ namespace org.apache.rocketmq
         public void testSendMessage()
         {
             var producer = new Producer(resolver, resourceNamespace);
+            producer.ResourceNamespace = resourceNamespace;
+            producer.CredentialsProvider = new ConfigFileCredentialsProvider();
+            producer.Region = "cn-hangzhou-pre";
             producer.start();
-
+            byte[] body = new byte[1024];
+            Array.Fill(body, (byte)'x');
+            var msg = new Message(topic, body);
+            var sendResult = producer.send(msg).GetAwaiter().GetResult();
             producer.shutdown();
         }
 
