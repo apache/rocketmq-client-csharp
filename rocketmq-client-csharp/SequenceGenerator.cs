@@ -83,7 +83,7 @@ namespace org.apache.rocketmq
 
         private static int SecondsSinceCustomEpoch()
         {
-            var customEpoch = new DateTime(2021, 01, 01, 00, 00, 00);
+            var customEpoch = new DateTime(2021, 01, 01, 00, 00, 00, DateTimeKind.Utc);
             var diff = DateTime.UtcNow.Subtract(customEpoch);
             return (int)diff.TotalSeconds;
         }
