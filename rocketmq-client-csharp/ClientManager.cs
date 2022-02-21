@@ -15,71 +15,63 @@
  * limitations under the License.
  */
 
-using System.Collections.Concurrent;
 
-using rmq = global::apache.rocketmq.v1;
-using Grpc.Net.Client;
+using rmq = apache.rocketmq.v1;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using grpc = global::Grpc.Core;
+using grpc = Grpc.Core;
 using System.Collections.Generic;
-using Grpc.Core.Interceptors;
-using System.Net.Http;
 
 namespace org.apache.rocketmq {
     public class ClientManager : IClientManager {
 
         public ClientManager() {
-            rpcClients = new ConcurrentDictionary<string, RpcClient>();
+            _rpcClients = new Dictionary<string, RpcClient>();
+            _clientLock = new ReaderWriterLockSlim();
         }
 
-        public IRpcClient getRpcClient(string target) {
-            if (!rpcClients.ContainsKey(target)) {
-                var channel = GrpcChannel.ForAddress(target, new GrpcChannelOptions {
-                    HttpHandler = createHttpHandler()
-                });
-                var invoker = channel.Intercept(new ClientLoggerInterceptor());
-                var client = new rmq::MessagingService.MessagingServiceClient(invoker);
-                var rpcClient = new RpcClient(client);
-                if(rpcClients.TryAdd(target, rpcClient)) {
-                    return rpcClient;
+        public IRpcClient getRpcClient(string target)
+        {
+            _clientLock.EnterReadLock();
+            try
+            {
+                if (_rpcClients.ContainsKey(target))
+                {
+                    return _rpcClients[target];
                 }
             }
-            return rpcClients[target];
-        }
-
-        /**
-         * See https://docs.microsoft.com/en-us/aspnet/core/grpc/performance?view=aspnetcore-6.0 for performance consideration and
-         * why parameters are configured this way.
-         */
-        public static HttpMessageHandler createHttpHandler()
-        {
-            var sslOptions = new System.Net.Security.SslClientAuthenticationOptions();
-            // Disable server certificate validation during development phase.
-            // Comment out the following line if server certificate validation is required. 
-            sslOptions.RemoteCertificateValidationCallback = (sender, cert, chain, sslPolicyErrors) => { return true; };
-            var handler = new SocketsHttpHandler
+            finally
             {
-                PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
-                KeepAlivePingDelay = TimeSpan.FromSeconds(60),
-                KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
-                EnableMultipleHttp2Connections = true,
-                SslOptions = sslOptions,
-            };
-            return handler;
+                _clientLock.ExitReadLock();
+            }
+
+            _clientLock.EnterWriteLock();
+            try
+            {
+                if (_rpcClients.ContainsKey(target))
+                {
+                    return _rpcClients[target];
+                }
+
+                var client = new RpcClient(target);
+                _rpcClients.Add(target, client);
+                return client;
+            }
+            finally
+            {
+                _clientLock.ExitWriteLock();
+            }
         }
 
         public async Task<TopicRouteData> resolveRoute(string target, grpc::Metadata metadata, rmq::QueryRouteRequest request, TimeSpan timeout)
         {
             var rpcClient = getRpcClient(target);
-            var deadline = DateTime.UtcNow.Add(timeout);
-            var callOptions = new grpc::CallOptions(metadata, deadline);
-            var queryRouteResponse = await rpcClient.queryRoute(request, callOptions);
+            var queryRouteResponse = await rpcClient.QueryRoute(metadata, request, timeout);
 
-            if (queryRouteResponse.Common.Status.Code != ((int)Google.Rpc.Code.Ok)) {
+            if (queryRouteResponse.Common.Status.Code != ((int)Google.Rpc.Code.Ok))
+            {
                 // Raise an application layer exception
-
             }
 
             var partitions = new List<Partition>();
@@ -147,9 +139,7 @@ namespace org.apache.rocketmq {
         public async Task<Boolean> heartbeat(string target, grpc::Metadata metadata, rmq::HeartbeatRequest request, TimeSpan timeout)
         {
             var rpcClient = getRpcClient(target);
-            var deadline = DateTime.UtcNow.Add(timeout);
-            var callOptions = new grpc.CallOptions(metadata, deadline);
-            var response = await rpcClient.heartbeat(request, callOptions);
+            var response = await rpcClient.Heartbeat(metadata, request, timeout);
             if (null == response)
             {
                 return false;
@@ -161,22 +151,18 @@ namespace org.apache.rocketmq {
         public async Task<rmq::SendMessageResponse> sendMessage(string target, grpc::Metadata metadata, rmq::SendMessageRequest request, TimeSpan timeout)
         {
             var rpcClient = getRpcClient(target);
-            var deadline = DateTime.UtcNow.Add(timeout);
-            var callOptions = new grpc::CallOptions(metadata, deadline);
-            var response = await rpcClient.sendMessage(request, callOptions);
+            var response = await rpcClient.SendMessage(metadata, request, timeout);
             return response;
         }
 
         public async Task<Boolean> notifyClientTermination(string target, grpc::Metadata metadata, rmq::NotifyClientTerminationRequest request, TimeSpan timeout)
         {
             var rpcClient = getRpcClient(target);
-            var deadline = DateTime.UtcNow.Add(timeout);
-            var callOptions = new grpc::CallOptions(metadata, deadline);
-            rmq::NotifyClientTerminationResponse response = await rpcClient.notifyClientTermination(request, callOptions);
+            rmq::NotifyClientTerminationResponse response = await rpcClient.NotifyClientTermination(metadata, request, timeout);
             return response.Common.Status.Code == ((int)Google.Rpc.Code.Ok);
         }
 
-        private ConcurrentDictionary<string, RpcClient> rpcClients;
-
+        private readonly Dictionary<string, RpcClient> _rpcClients;
+        private readonly ReaderWriterLockSlim _clientLock;
     }
 }
