@@ -22,12 +22,14 @@ using System.Threading;
 using System;
 using rmq = apache.rocketmq.v1;
 using grpc = global::Grpc.Core;
+using NLog;
 
 
 namespace org.apache.rocketmq
 {
     public abstract class Client : ClientConfig, IClient
     {
+        private static readonly Logger Logger = MqLogManager.Instance.GetCurrentClassLogger();
 
         public Client(INameServerResolver resolver, string resourceNamespace)
         {
@@ -57,6 +59,7 @@ namespace org.apache.rocketmq
 
         public virtual async Task Shutdown()
         {
+            Logger.Info($"Shutdown client[resource-namespace={resourceNamespace_}");
             updateTopicRouteCTS.Cancel();
             nameServerResolverCTS.Cancel();
             await clientManager.Shutdown();
@@ -68,11 +71,13 @@ namespace org.apache.rocketmq
             if (0 == nameServers.Count)
             {
                 // Whoops, something should be wrong. We got an empty name server list.
+                Logger.Warn("Got an empty name server list");
                 return;
             }
 
             if (nameServers.Equals(this.nameServers))
             {
+                Logger.Debug("Name server list remains unchanged");
                 return;
             }
 
@@ -93,7 +98,7 @@ namespace org.apache.rocketmq
                 }
                 else
                 {
-                    // TODO: log warning here.
+                    Logger.Error("Failed to resolve name server list");
                     return;
                 }
             }
@@ -171,7 +176,7 @@ namespace org.apache.rocketmq
                 }
                 else
                 {
-                    // TODO: log warning here.
+                    Logger.Error("Name server is not properly configured. List is null or empty");
                     return null;
                 }
             }
@@ -273,6 +278,6 @@ namespace org.apache.rocketmq
         private ConcurrentDictionary<string, TopicRouteData> topicRouteTable;
         private CancellationTokenSource updateTopicRouteCTS;
 
-        private const int MaxTransparentRetry = 3;
+        protected const int MaxTransparentRetry = 3;
     }
 }
