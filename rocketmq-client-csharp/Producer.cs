@@ -21,6 +21,7 @@ using pb = global::Google.Protobuf;
 using grpc = global::Grpc.Core;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using NLog;
 
 
 namespace org.apache.rocketmq
@@ -56,6 +57,7 @@ namespace org.apache.rocketmq
                 var topicRouteData = await getRouteFor(message.Topic, false);
                 if (null == topicRouteData || null == topicRouteData.Partitions || 0 == topicRouteData.Partitions.Count)
                 {
+                    Logger.Error($"Failed to resolve route info for {message.Topic} after {MaxTransparentRetry} attempts");
                     throw new TopicRouteException(string.Format("No topic route for {0}", message.Topic));
                 }
 
@@ -119,18 +121,22 @@ namespace org.apache.rocketmq
                 }
                 catch (Exception e)
                 {
+                    Logger.Info(e, $"Failed to send message to {target}");
                     ex = e;
                 }
             }
 
             if (null != ex)
             {
+                Logger.Error(ex, $"Failed to send message after {message.MaxAttemptTimes} attempts");
                 throw ex;
             }
 
+            Logger.Error($"Failed to send message after {message.MaxAttemptTimes} attempts with unspecified reasons");
             throw new Exception("Send message failed");
         }
 
         private ConcurrentDictionary<string, PublishLoadBalancer> loadBalancer;
+        private static readonly Logger Logger = MqLogManager.Instance.GetCurrentClassLogger();
     }
 }
