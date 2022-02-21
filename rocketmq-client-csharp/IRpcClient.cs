@@ -28,10 +28,38 @@ namespace org.apache.rocketmq
 
         Task<HeartbeatResponse> Heartbeat(Metadata metadata, HeartbeatRequest request, TimeSpan timeout);
 
-        Task<NotifyClientTerminationResponse> NotifyClientTermination(Metadata metadata,
-            NotifyClientTerminationRequest request, TimeSpan timeout);
+        Task<HealthCheckResponse> HealthCheck(Metadata metadata, HealthCheckRequest request, TimeSpan timeout);
 
         Task<SendMessageResponse> SendMessage(Metadata metadata, SendMessageRequest request, TimeSpan timeout);
+
+        Task<QueryAssignmentResponse> QueryAssignment(Metadata metadata, QueryAssignmentRequest request,
+            TimeSpan timeout);
+
+        Task<ReceiveMessageResponse> ReceiveMessage(Metadata metadata, ReceiveMessageRequest request, TimeSpan timeout);
+
+        Task<AckMessageResponse> AckMessage(Metadata metadata, AckMessageRequest request, TimeSpan timeout);
+
+        Task<NackMessageResponse> NackMessage(Metadata metadata, NackMessageRequest request, TimeSpan timeout);
+
+        Task<ForwardMessageToDeadLetterQueueResponse> ForwardMessageToDeadLetterQueue(Metadata metadata,
+            ForwardMessageToDeadLetterQueueRequest request, TimeSpan timeout);
+
+        Task<EndTransactionResponse> EndTransaction(Metadata metadata, EndTransactionRequest request, TimeSpan timeout);
+
+        Task<QueryOffsetResponse> QueryOffset(Metadata metadata, QueryOffsetRequest request, TimeSpan timeout);
+
+        Task<PullMessageResponse> PullMessage(Metadata metadata, PullMessageRequest request, TimeSpan timeout);
+
+        Task<PollCommandResponse> PollMessage(Metadata metadata, PollCommandRequest request, TimeSpan timeout);
+
+        Task<ReportThreadStackTraceResponse> ReportThreadStackTrace(Metadata metadata,
+            ReportThreadStackTraceRequest request, TimeSpan timeout);
+
+        Task<ReportMessageConsumptionResultResponse> ReportMessageConsumptionResult(Metadata metadata,
+            ReportMessageConsumptionResultRequest request, TimeSpan timeout);
+
+        Task<NotifyClientTerminationResponse> NotifyClientTermination(Metadata metadata,
+            NotifyClientTerminationRequest request, TimeSpan timeout);
 
         Task Shutdown();
     }

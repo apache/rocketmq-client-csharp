@@ -30,7 +30,7 @@ namespace org.apache.rocketmq
     public class RpcClient : IRpcClient
     {
         private readonly MessagingService.MessagingServiceClient _stub;
-        private GrpcChannel _channel;
+        private readonly GrpcChannel _channel;
 
         public RpcClient(string target)
         {
@@ -90,6 +90,16 @@ namespace org.apache.rocketmq
             return await call.ResponseAsync;
         }
 
+        public async Task<HealthCheckResponse> HealthCheck(Metadata metadata, HealthCheckRequest request,
+            TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new CallOptions(metadata, deadline);
+
+            var call = _stub.HealthCheckAsync(request, callOptions);
+            return await call.ResponseAsync;
+        }
+
         public async Task<SendMessageResponse> SendMessage(Metadata metadata, SendMessageRequest request,
             TimeSpan timeout)
         {
@@ -97,6 +107,116 @@ namespace org.apache.rocketmq
             var callOptions = new CallOptions(metadata, deadline);
 
             var call = _stub.SendMessageAsync(request, callOptions);
+            return await call.ResponseAsync;
+        }
+
+        public async Task<QueryAssignmentResponse> QueryAssignment(Metadata metadata, QueryAssignmentRequest request,
+            TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new CallOptions(metadata, deadline);
+
+            var call = _stub.QueryAssignmentAsync(request, callOptions);
+            return await call.ResponseAsync;
+        }
+
+        public async Task<ReceiveMessageResponse> ReceiveMessage(Metadata metadata, ReceiveMessageRequest request,
+            TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new CallOptions(metadata, deadline);
+
+            var call = _stub.ReceiveMessageAsync(request, callOptions);
+            return await call.ResponseAsync;
+        }
+
+        public async Task<AckMessageResponse> AckMessage(Metadata metadata, AckMessageRequest request, TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new CallOptions(metadata, deadline);
+
+            var call = _stub.AckMessageAsync(request, callOptions);
+            return await call.ResponseAsync;
+        }
+
+        public async Task<NackMessageResponse> NackMessage(Metadata metadata, NackMessageRequest request,
+            TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new CallOptions(metadata, deadline);
+
+            var call = _stub.NackMessageAsync(request, callOptions);
+            return await call.ResponseAsync;
+        }
+
+        public async Task<ForwardMessageToDeadLetterQueueResponse> ForwardMessageToDeadLetterQueue(Metadata metadata,
+            ForwardMessageToDeadLetterQueueRequest request, TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new CallOptions(metadata, deadline);
+
+            var call = _stub.ForwardMessageToDeadLetterQueueAsync(request, callOptions);
+            return await call.ResponseAsync;
+        }
+
+        public async Task<EndTransactionResponse> EndTransaction(Metadata metadata, EndTransactionRequest request,
+            TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new CallOptions(metadata, deadline);
+
+            var call = _stub.EndTransactionAsync(request, callOptions);
+            return await call.ResponseAsync;
+        }
+
+        public async Task<QueryOffsetResponse> QueryOffset(Metadata metadata, QueryOffsetRequest request,
+            TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new CallOptions(metadata, deadline);
+
+            var call = _stub.QueryOffsetAsync(request, callOptions);
+            return await call.ResponseAsync;
+        }
+
+        public async Task<PullMessageResponse> PullMessage(Metadata metadata, PullMessageRequest request,
+            TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new CallOptions(metadata, deadline);
+
+            var call = _stub.PullMessageAsync(request, callOptions);
+            return await call.ResponseAsync;
+        }
+
+        public async Task<PollCommandResponse> PollMessage(Metadata metadata, PollCommandRequest request,
+            TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new CallOptions(metadata, deadline);
+
+            var call = _stub.PollCommandAsync(request, callOptions);
+            return await call.ResponseAsync;
+        }
+
+        public async Task<ReportThreadStackTraceResponse> ReportThreadStackTrace(Metadata metadata,
+            ReportThreadStackTraceRequest request, TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new CallOptions(metadata, deadline);
+
+            var call = _stub.ReportThreadStackTraceAsync(request, callOptions);
+            return await call.ResponseAsync;
+        }
+
+        public async Task<ReportMessageConsumptionResultResponse> ReportMessageConsumptionResult(Metadata metadata,
+            ReportMessageConsumptionResultRequest request,
+            TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new CallOptions(metadata, deadline);
+
+            var call = _stub.ReportMessageConsumptionResultAsync(request, callOptions);
             return await call.ResponseAsync;
         }
 
