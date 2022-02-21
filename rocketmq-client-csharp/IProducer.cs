@@ -19,11 +19,11 @@ using System.Threading.Tasks;
 
 namespace org.apache.rocketmq {
     public interface IProducer {
-        void start();
+        void Start();
 
-        void shutdown();
+        Task Shutdown();
 
-        Task<SendResult> send(Message message);
+        Task<SendResult> Send(Message message);
         
     }
 }

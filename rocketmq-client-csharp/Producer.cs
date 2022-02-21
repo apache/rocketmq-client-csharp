@@ -32,16 +32,16 @@ namespace org.apache.rocketmq
             this.loadBalancer = new ConcurrentDictionary<string, PublishLoadBalancer>();
         }
 
-        public override void start()
+        public override void Start()
         {
-            base.start();
+            base.Start();
             // More initalization
         }
 
-        public override void shutdown()
+        public override async Task Shutdown()
         {
             // Release local resources
-            base.shutdown();
+            await base.Shutdown();
         }
 
         public override void prepareHeartbeatData(rmq::HeartbeatRequest request)
@@ -49,7 +49,7 @@ namespace org.apache.rocketmq
 
         }
 
-        public async Task<SendResult> send(Message message)
+        public async Task<SendResult> Send(Message message)
         {
             if (!loadBalancer.ContainsKey(message.Topic))
             {
