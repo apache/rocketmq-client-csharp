@@ -175,24 +175,37 @@ namespace org.apache.rocketmq
                 }
             }
 
-            // We got one or more name servers available.
-            string nameServer = nameServers[currentNameServerIndex];
-            var request = new rmq::QueryRouteRequest();
-            request.Topic = new rmq::Resource();
-            request.Topic.ResourceNamespace = resourceNamespace_;
-            request.Topic.Name = topic;
-            request.Endpoints = new rmq::Endpoints();
-            request.Endpoints.Scheme = rmq::AddressScheme.Ipv4;
-            var address = new rmq::Address();
-            int pos = nameServer.LastIndexOf(':');
-            address.Host = nameServer.Substring(0, pos);
-            address.Port = Int32.Parse(nameServer.Substring(pos + 1));
-            request.Endpoints.Addresses.Add(address);
-            var target = string.Format("https://{0}:{1}", address.Host, address.Port);
-            var metadata = new grpc.Metadata();
-            Signature.sign(this, metadata);
-            var topicRouteData = await clientManager.resolveRoute(target, metadata, request, getIoTimeout());
-            return topicRouteData;
+
+            for (int retry = 0; retry < MaxTransparentRetry; retry++)
+            {
+                // We got one or more name servers available.
+                int index = (currentNameServerIndex + retry) % nameServers.Count;
+                string nameServer = nameServers[index];
+                var request = new rmq::QueryRouteRequest();
+                request.Topic = new rmq::Resource();
+                request.Topic.ResourceNamespace = resourceNamespace_;
+                request.Topic.Name = topic;
+                request.Endpoints = new rmq::Endpoints();
+                request.Endpoints.Scheme = rmq::AddressScheme.Ipv4;
+                var address = new rmq::Address();
+                int pos = nameServer.LastIndexOf(':');
+                address.Host = nameServer.Substring(0, pos);
+                address.Port = Int32.Parse(nameServer.Substring(pos + 1));
+                request.Endpoints.Addresses.Add(address);
+                var target = string.Format("https://{0}:{1}", address.Host, address.Port);
+                var metadata = new grpc.Metadata();
+                Signature.sign(this, metadata);
+                var topicRouteData = await clientManager.resolveRoute(target, metadata, request, getIoTimeout());
+                if (null != topicRouteData)
+                {
+                    if (retry > 0)
+                    {
+                        currentNameServerIndex = index;
+                    }
+                    return topicRouteData;
+                }
+            }
+            return null;
         }
 
         public abstract void prepareHeartbeatData(rmq::HeartbeatRequest request);
@@ -258,5 +271,7 @@ namespace org.apache.rocketmq
 
         private ConcurrentDictionary<string, TopicRouteData> topicRouteTable;
         private CancellationTokenSource updateTopicRouteCTS;
+
+        private const int MaxTransparentRetry = 3;
     }
 }
