@@ -49,13 +49,13 @@ namespace org.apache.rocketmq
             producer.ResourceNamespace = resourceNamespace;
             producer.CredentialsProvider = new ConfigFileCredentialsProvider();
             producer.Region = "cn-hangzhou-pre";
-            producer.start();
+            producer.Start();
             byte[] body = new byte[1024];
             Array.Fill(body, (byte)'x');
             var msg = new Message(topic, body);
-            var sendResult = producer.send(msg).GetAwaiter().GetResult();
+            var sendResult = producer.Send(msg).GetAwaiter().GetResult();
             Assert.IsNotNull(sendResult);
-            producer.shutdown();
+            producer.Shutdown().GetAwaiter().GetResult();
         }
 
         private static string resourceNamespace = "MQ_INST_1080056302921134_BXuIbML7";

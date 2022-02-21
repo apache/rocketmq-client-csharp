@@ -32,5 +32,7 @@ namespace org.apache.rocketmq
             NotifyClientTerminationRequest request, TimeSpan timeout);
 
         Task<SendMessageResponse> SendMessage(Metadata metadata, SendMessageRequest request, TimeSpan timeout);
+
+        Task Shutdown();
     }
 }

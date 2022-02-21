@@ -30,15 +30,24 @@ namespace org.apache.rocketmq
     public class RpcClient : IRpcClient
     {
         private readonly MessagingService.MessagingServiceClient _stub;
+        private GrpcChannel _channel;
 
         public RpcClient(string target)
         {
-            var channel = GrpcChannel.ForAddress(target, new GrpcChannelOptions
+            _channel = GrpcChannel.ForAddress(target, new GrpcChannelOptions
             {
                 HttpHandler = CreateHttpHandler()
             });
-            var invoker = channel.Intercept(new ClientLoggerInterceptor());
+            var invoker = _channel.Intercept(new ClientLoggerInterceptor());
             _stub = new MessagingService.MessagingServiceClient(invoker);
+        }
+
+        public async Task Shutdown()
+        {
+            if (null != _channel)
+            {
+                await _channel.ShutdownAsync();
+            }
         }
 
         /**

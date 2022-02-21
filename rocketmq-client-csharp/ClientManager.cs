@@ -162,6 +162,25 @@ namespace org.apache.rocketmq {
             return response.Common.Status.Code == ((int)Google.Rpc.Code.Ok);
         }
 
+        public async Task Shutdown()
+        {
+            _clientLock.EnterReadLock();
+            try
+            {
+                List<Task> tasks = new List<Task>();
+                foreach (var item in _rpcClients)
+                {
+                    tasks.Add(item.Value.Shutdown());
+                }
+                await Task.WhenAll(tasks);
+            }
+            finally
+            {
+                _clientLock.ExitReadLock();
+            }
+
+        }
+
         private readonly Dictionary<string, RpcClient> _rpcClients;
         private readonly ReaderWriterLockSlim _clientLock;
     }

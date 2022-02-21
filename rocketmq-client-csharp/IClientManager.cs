@@ -32,5 +32,6 @@ namespace org.apache.rocketmq {
 
         Task<SendMessageResponse> sendMessage(string target, grpc::Metadata metadata, SendMessageRequest request, TimeSpan timeout);
 
+        Task Shutdown();
     }
 }
