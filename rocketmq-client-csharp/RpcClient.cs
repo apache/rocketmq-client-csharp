@@ -15,47 +15,90 @@
  * limitations under the License.
  */
 
+using System;
+using System.Net.Http;
+using System.Net.Security;
+using System.Threading;
 using System.Threading.Tasks;
 using apache.rocketmq.v1;
-using grpc = global::Grpc.Core;
+using Grpc.Core;
+using Grpc.Core.Interceptors;
+using Grpc.Net.Client;
 
-namespace org.apache.rocketmq {
-    public class RpcClient : IRpcClient {
-        public RpcClient(MessagingService.MessagingServiceClient client) {
-            stub = client;
+namespace org.apache.rocketmq
+{
+    public class RpcClient : IRpcClient
+    {
+        private readonly MessagingService.MessagingServiceClient _stub;
+
+        public RpcClient(string target)
+        {
+            var channel = GrpcChannel.ForAddress(target, new GrpcChannelOptions
+            {
+                HttpHandler = CreateHttpHandler()
+            });
+            var invoker = channel.Intercept(new ClientLoggerInterceptor());
+            _stub = new MessagingService.MessagingServiceClient(invoker);
         }
 
-        public async Task<QueryRouteResponse> queryRoute(QueryRouteRequest request, grpc::CallOptions callOptions)
+        /**
+         * See https://docs.microsoft.com/en-us/aspnet/core/grpc/performance?view=aspnetcore-6.0 for performance consideration and
+         * why parameters are configured this way.
+         */
+        private HttpMessageHandler CreateHttpHandler()
         {
-            var call = stub.QueryRouteAsync(request, callOptions);
-            var response = await call.ResponseAsync;
-            var status = call.GetStatus();
-            if (status.StatusCode != grpc.StatusCode.OK) {
-                //TODO: Something is wrong, raise an exception here.
-            }
-            return response;
+            var sslOptions = new SslClientAuthenticationOptions();
+            // Disable server certificate validation during development phase.
+            // Comment out the following line if server certificate validation is required. 
+            sslOptions.RemoteCertificateValidationCallback = (sender, cert, chain, sslPolicyErrors) => { return true; };
+            var handler = new SocketsHttpHandler
+            {
+                PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+                KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+                KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+                EnableMultipleHttp2Connections = true,
+                SslOptions = sslOptions,
+            };
+            return handler;
         }
 
-        public async Task<HeartbeatResponse> heartbeat(HeartbeatRequest request, grpc::CallOptions callOptions)
+        public async Task<QueryRouteResponse> QueryRoute(Metadata metadata, QueryRouteRequest request, TimeSpan timeout)
         {
-            var call = stub.HeartbeatAsync(request, callOptions);
-            var response = await call.ResponseAsync;
-            return response;
-        }
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new CallOptions(metadata, deadline);
 
-        public async Task<NotifyClientTerminationResponse> notifyClientTermination(NotifyClientTerminationRequest request, grpc::CallOptions callOptions)
-        {
-            var call = stub.NotifyClientTerminationAsync(request, callOptions);
-            var response = await call.ResponseAsync;
-            return response;
-        }
-
-        public async Task<SendMessageResponse> sendMessage(SendMessageRequest request, grpc::CallOptions callOptions)
-        {
-            var call = stub.SendMessageAsync(request, callOptions);
+            var call = _stub.QueryRouteAsync(request, callOptions);
             return await call.ResponseAsync;
         }
 
-        private MessagingService.MessagingServiceClient stub;
+
+        public async Task<HeartbeatResponse> Heartbeat(Metadata metadata, HeartbeatRequest request, TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new CallOptions(metadata, deadline);
+
+            var call = _stub.HeartbeatAsync(request, callOptions);
+            return await call.ResponseAsync;
+        }
+
+        public async Task<SendMessageResponse> SendMessage(Metadata metadata, SendMessageRequest request,
+            TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new CallOptions(metadata, deadline);
+
+            var call = _stub.SendMessageAsync(request, callOptions);
+            return await call.ResponseAsync;
+        }
+
+        public async Task<NotifyClientTerminationResponse> NotifyClientTermination(Metadata metadata,
+            NotifyClientTerminationRequest request, TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow.Add(timeout);
+            var callOptions = new CallOptions(metadata, deadline);
+
+            var call = _stub.NotifyClientTerminationAsync(request, callOptions);
+            return await call.ResponseAsync;
+        }
     }
 }

@@ -42,9 +42,7 @@ namespace tests
 
         [TestMethod]
         public void TestRpcClientImplCtor() {
-            using var channel = GrpcChannel.ForAddress("https://localhost:5001");
-            var client = new MessagingService.MessagingServiceClient(channel);
-            RpcClient impl = new RpcClient(client);
+            RpcClient impl = new RpcClient("https://localhost:5001");
         }
     }
 }

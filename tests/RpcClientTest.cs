@@ -35,13 +35,7 @@ namespace org.apache.rocketmq
         public static void SetUp(TestContext context)
         {
             string target = string.Format("https://{0}:{1}", host, port);
-            var channel = GrpcChannel.ForAddress(target, new GrpcChannelOptions
-            {
-                HttpHandler = ClientManager.createHttpHandler()
-            });
-            var invoker = channel.Intercept(new ClientLoggerInterceptor());
-            var client = new rmq::MessagingService.MessagingServiceClient(invoker);
-            rpcClient = new RpcClient(client);
+            rpcClient = new RpcClient(target);
 
             clientConfig = new ClientConfig();
             var credentialsProvider = new ConfigFileCredentialsProvider();
@@ -72,10 +66,8 @@ namespace org.apache.rocketmq
 
             var metadata = new grpc::Metadata();
             Signature.sign(clientConfig, metadata);
-
-            var deadline = DateTime.UtcNow.Add(TimeSpan.FromSeconds(3));
-            var callOptions = new grpc::CallOptions(metadata, deadline);
-            var response = rpcClient.queryRoute(request, callOptions).GetAwaiter().GetResult();
+            
+            var response = rpcClient.QueryRoute(metadata, request, TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
         }
 
 
@@ -92,10 +84,8 @@ namespace org.apache.rocketmq
 
             var metadata = new grpc::Metadata();
             Signature.sign(clientConfig, metadata);
-
-            var deadline = DateTime.UtcNow.Add(TimeSpan.FromSeconds(3));
-            var callOptions = new grpc::CallOptions(metadata, deadline);
-            var response = rpcClient.heartbeat(request, callOptions).GetAwaiter().GetResult();
+            
+            var response = rpcClient.Heartbeat(metadata, request, TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
         }
 
         [TestMethod]
@@ -122,10 +112,7 @@ namespace org.apache.rocketmq
             var metadata = new grpc::Metadata();
             Signature.sign(clientConfig, metadata);
 
-            var deadline = DateTime.UtcNow.AddSeconds(3);
-            var callOptions = new grpc::CallOptions(metadata, deadline);
-
-            var response = rpcClient.sendMessage(request, callOptions).GetAwaiter().GetResult();
+            var response = rpcClient.SendMessage(metadata, request, TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
         }
 
         // Remove the Ignore annotation if server has fixed
@@ -142,9 +129,7 @@ namespace org.apache.rocketmq
             var metadata = new grpc::Metadata();
             Signature.sign(clientConfig, metadata);
 
-            var deadline = DateTime.UtcNow.AddSeconds(3);
-            var callOptions = new grpc::CallOptions(metadata, deadline);
-            var response = rpcClient.notifyClientTermination(request, callOptions).GetAwaiter().GetResult();
+            var response = rpcClient.NotifyClientTermination(metadata, request, TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
         }
 
         private static string resourceNamespace = "MQ_INST_1080056302921134_BXuIbML7";
