@@ -14,17 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 using System;
 using System.Threading.Tasks;
-using rmq = apache.rocketmq.v1;
-using pb = global::Google.Protobuf;
-using grpc = global::Grpc.Core;
+using rmq = Apache.Rocketmq.V1;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using Google.Protobuf;
+using Grpc.Core;
 using NLog;
 
-
-namespace org.apache.rocketmq
+namespace Org.Apache.Rocketmq
 {
     public class Producer : Client, IProducer
     {
@@ -45,7 +45,7 @@ namespace org.apache.rocketmq
             await base.Shutdown();
         }
 
-        public override void prepareHeartbeatData(rmq::HeartbeatRequest request)
+        public override void PrepareHeartbeatData(rmq::HeartbeatRequest request)
         {
 
         }
@@ -54,7 +54,7 @@ namespace org.apache.rocketmq
         {
             if (!loadBalancer.ContainsKey(message.Topic))
             {
-                var topicRouteData = await getRouteFor(message.Topic, false);
+                var topicRouteData = await GetRouteFor(message.Topic, false);
                 if (null == topicRouteData || null == topicRouteData.Partitions || 0 == topicRouteData.Partitions.Count)
                 {
                     Logger.Error($"Failed to resolve route info for {message.Topic} after {MaxTransparentRetry} attempts");
@@ -69,7 +69,7 @@ namespace org.apache.rocketmq
 
             var request = new rmq::SendMessageRequest();
             request.Message = new rmq::Message();
-            request.Message.Body = pb::ByteString.CopyFrom(message.Body);
+            request.Message.Body = ByteString.CopyFrom(message.Body);
             request.Message.Topic = new rmq::Resource();
             request.Message.Topic.ResourceNamespace = resourceNamespace();
             request.Message.Topic.Name = message.Topic;
@@ -103,7 +103,7 @@ namespace org.apache.rocketmq
                 targets.Add(partition.Broker.targetUrl());
             }
 
-            var metadata = new grpc::Metadata();
+            var metadata = new Metadata();
             Signature.sign(this, metadata);
 
             Exception ex = null;
@@ -112,7 +112,7 @@ namespace org.apache.rocketmq
             {
                 try
                 {
-                    rmq::SendMessageResponse response = await clientManager.sendMessage(target, metadata, request, getIoTimeout());
+                    rmq::SendMessageResponse response = await Manager.SendMessage(target, metadata, request, getIoTimeout());
                     if (null != response && (int)global::Google.Rpc.Code.Ok == response.Common.Status.Code)
                     {
                         var messageId = response.MessageId;

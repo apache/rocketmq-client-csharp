@@ -15,9 +15,13 @@
  * limitations under the License.
  */
 
-public enum Permission {
-    NONE,
-    READ,
-    WRITE,
-    READ_WRITE,
+namespace Org.Apache.Rocketmq
+{
+    public enum Permission
+    {
+        None,
+        Read,
+        Write,
+        ReadWrite,
+    }
 }

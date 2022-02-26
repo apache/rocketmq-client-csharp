@@ -17,10 +17,10 @@
 
 using System;
 using System.Threading.Tasks;
-using apache.rocketmq.v1;
+using Apache.Rocketmq.V1;
 using Grpc.Core;
 
-namespace org.apache.rocketmq
+namespace Org.Apache.Rocketmq
 {
     public interface IRpcClient
     {

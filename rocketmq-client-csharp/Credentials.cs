@@ -17,7 +17,7 @@
 
 using System;
 
-namespace org.apache.rocketmq {
+namespace Org.Apache.Rocketmq {
     public class Credentials {
 
         public Credentials(string accessKey, string accessSecret) {

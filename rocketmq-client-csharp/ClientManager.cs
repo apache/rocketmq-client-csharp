@@ -15,27 +15,29 @@
  * limitations under the License.
  */
 
-
-using rmq = apache.rocketmq.v1;
+using rmq = Apache.Rocketmq.V1;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 using grpc = Grpc.Core;
 using System.Collections.Generic;
 
-namespace org.apache.rocketmq {
-    public class ClientManager : IClientManager {
-
-        public ClientManager() {
+namespace Org.Apache.Rocketmq
+{
+    public class ClientManager : IClientManager
+    {
+        public ClientManager()
+        {
             _rpcClients = new Dictionary<string, RpcClient>();
             _clientLock = new ReaderWriterLockSlim();
         }
 
-        public IRpcClient getRpcClient(string target)
+        public IRpcClient GetRpcClient(string target)
         {
             _clientLock.EnterReadLock();
             try
             {
+                // client exists, return in advance.
                 if (_rpcClients.ContainsKey(target))
                 {
                     return _rpcClients[target];
@@ -49,11 +51,13 @@ namespace org.apache.rocketmq {
             _clientLock.EnterWriteLock();
             try
             {
+                // client exists, return in advance.
                 if (_rpcClients.ContainsKey(target))
                 {
                     return _rpcClients[target];
                 }
 
+                // client does not exist, generate a new one
                 var client = new RpcClient(target);
                 _rpcClients.Add(target, client);
                 return client;
@@ -64,9 +68,10 @@ namespace org.apache.rocketmq {
             }
         }
 
-        public async Task<TopicRouteData> resolveRoute(string target, grpc::Metadata metadata, rmq::QueryRouteRequest request, TimeSpan timeout)
+        public async Task<TopicRouteData> ResolveRoute(string target, grpc::Metadata metadata,
+            rmq::QueryRouteRequest request, TimeSpan timeout)
         {
-            var rpcClient = getRpcClient(target);
+            var rpcClient = GetRpcClient(target);
             var queryRouteResponse = await rpcClient.QueryRoute(metadata, request, timeout);
 
             if (queryRouteResponse.Common.Status.Code != ((int)Google.Rpc.Code.Ok))
@@ -80,53 +85,57 @@ namespace org.apache.rocketmq {
             {
                 var topic = new Topic(partition.Topic.ResourceNamespace, partition.Topic.Name);
                 var id = partition.Id;
-                Permission permission = Permission.READ_WRITE;
-                switch (partition.Permission) {
+                Permission permission = Permission.ReadWrite;
+                switch (partition.Permission)
+                {
                     case rmq::Permission.None:
                     {
-                        permission = Permission.NONE;
+                        permission = Permission.None;
                         break;
                     }
                     case rmq::Permission.Read:
                     {
-                        permission = Permission.READ;
+                        permission = Permission.Read;
                         break;
                     }
                     case rmq::Permission.Write:
                     {
-                        permission = Permission.WRITE;
+                        permission = Permission.Write;
                         break;
                     }
                     case rmq::Permission.ReadWrite:
                     {
-                        permission = Permission.READ_WRITE;
+                        permission = Permission.ReadWrite;
                         break;
                     }
                 }
 
                 AddressScheme scheme = AddressScheme.IPv4;
-                switch(partition.Broker.Endpoints.Scheme) {
+                switch (partition.Broker.Endpoints.Scheme)
+                {
                     case rmq::AddressScheme.Ipv4:
-                        {
+                    {
                         scheme = AddressScheme.IPv4;
                         break;
                     }
                     case rmq::AddressScheme.Ipv6:
-                        {
+                    {
                         scheme = AddressScheme.IPv6;
                         break;
                     }
                     case rmq::AddressScheme.DomainName:
-                        {
+                    {
                         scheme = AddressScheme.DOMAIN_NAME;
                         break;
                     }
                 }
 
                 List<Address> addresses = new List<Address>();
-                foreach(var item in partition.Broker.Endpoints.Addresses) {
+                foreach (var item in partition.Broker.Endpoints.Addresses)
+                {
                     addresses.Add(new Address(item.Host, item.Port));
                 }
+
                 ServiceAddress serviceAddress = new ServiceAddress(scheme, addresses);
                 Broker broker = new Broker(partition.Broker.Name, id, serviceAddress);
                 partitions.Add(new Partition(topic, broker, id, permission));
@@ -136,9 +145,10 @@ namespace org.apache.rocketmq {
             return topicRouteData;
         }
 
-        public async Task<Boolean> heartbeat(string target, grpc::Metadata metadata, rmq::HeartbeatRequest request, TimeSpan timeout)
+        public async Task<Boolean> Heartbeat(string target, grpc::Metadata metadata, rmq::HeartbeatRequest request,
+            TimeSpan timeout)
         {
-            var rpcClient = getRpcClient(target);
+            var rpcClient = GetRpcClient(target);
             var response = await rpcClient.Heartbeat(metadata, request, timeout);
             if (null == response)
             {
@@ -148,17 +158,20 @@ namespace org.apache.rocketmq {
             return response.Common.Status.Code == (int)Google.Rpc.Code.Ok;
         }
 
-        public async Task<rmq::SendMessageResponse> sendMessage(string target, grpc::Metadata metadata, rmq::SendMessageRequest request, TimeSpan timeout)
+        public async Task<rmq::SendMessageResponse> SendMessage(string target, grpc::Metadata metadata,
+            rmq::SendMessageRequest request, TimeSpan timeout)
         {
-            var rpcClient = getRpcClient(target);
+            var rpcClient = GetRpcClient(target);
             var response = await rpcClient.SendMessage(metadata, request, timeout);
             return response;
         }
 
-        public async Task<Boolean> notifyClientTermination(string target, grpc::Metadata metadata, rmq::NotifyClientTerminationRequest request, TimeSpan timeout)
+        public async Task<Boolean> NotifyClientTermination(string target, grpc::Metadata metadata,
+            rmq::NotifyClientTerminationRequest request, TimeSpan timeout)
         {
-            var rpcClient = getRpcClient(target);
-            rmq::NotifyClientTerminationResponse response = await rpcClient.NotifyClientTermination(metadata, request, timeout);
+            var rpcClient = GetRpcClient(target);
+            rmq::NotifyClientTerminationResponse response =
+                await rpcClient.NotifyClientTermination(metadata, request, timeout);
             return response.Common.Status.Code == ((int)Google.Rpc.Code.Ok);
         }
 
@@ -172,13 +185,13 @@ namespace org.apache.rocketmq {
                 {
                     tasks.Add(item.Value.Shutdown());
                 }
+
                 await Task.WhenAll(tasks);
             }
             finally
             {
                 _clientLock.ExitReadLock();
             }
-
         }
 
         private readonly Dictionary<string, RpcClient> _rpcClients;

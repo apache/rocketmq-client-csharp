@@ -16,7 +16,7 @@
  */
 using System;
 
-namespace org.apache.rocketmq {
+namespace Org.Apache.Rocketmq {
 
     public class ClientConfig : IClientConfig {
 
@@ -24,29 +24,29 @@ namespace org.apache.rocketmq {
             var hostName = System.Net.Dns.GetHostName();
             var pid = System.Diagnostics.Process.GetCurrentProcess().Id;
             this.clientId_ = string.Format("{0}@{1}#{2}", hostName, pid, instanceName_);
-            this.ioTimeout_ = TimeSpan.FromSeconds(3);
+            this._ioTimeout = TimeSpan.FromSeconds(3);
             this.longPollingIoTimeout_ = TimeSpan.FromSeconds(15);
         }
 
         public string region() {
-            return region_;
+            return _region;
         }
         public string Region {
-            set { region_ = value; }
+            set { _region = value; }
         }
 
         public string serviceName() {
-            return serviceName_;
+            return _serviceName;
         }
         public string ServiceName {
-            set { serviceName_ = value; }
+            set { _serviceName = value; }
         }
 
         public string resourceNamespace() {
-            return resourceNamespace_;
+            return _resourceNamespace;
         }
         public string ResourceNamespace {
-            set { resourceNamespace_ = value; }
+            set { _resourceNamespace = value; }
         }
 
         public ICredentialsProvider credentialsProvider() {
@@ -58,17 +58,17 @@ namespace org.apache.rocketmq {
         }
 
         public string tenantId() {
-            return tenantId_;
+            return _tenantId;
         }
         public string TenantId {
-            set { tenantId_ = value; }
+            set { _tenantId = value; }
         }
 
         public TimeSpan getIoTimeout() {
-            return ioTimeout_;
+            return _ioTimeout;
         }
         public TimeSpan IoTimeout {
-            set { ioTimeout_ = value; }
+            set { _ioTimeout = value; }
         }
 
         public TimeSpan getLongPollingTimeout() {
@@ -100,16 +100,16 @@ namespace org.apache.rocketmq {
             this.instanceName_ = instanceName;
         }
 
-        private string region_ = "cn-hangzhou";
-        private string serviceName_ = "ONS";
+        private string _region = "cn-hangzhou";
+        private string _serviceName = "ONS";
 
-        protected string resourceNamespace_;
+        protected string _resourceNamespace;
 
         private ICredentialsProvider credentialsProvider_;
 
-        private string tenantId_;
+        private string _tenantId;
 
-        private TimeSpan ioTimeout_;
+        private TimeSpan _ioTimeout;
 
         private TimeSpan longPollingIoTimeout_;
 

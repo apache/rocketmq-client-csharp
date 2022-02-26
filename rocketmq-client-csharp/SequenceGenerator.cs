@@ -18,7 +18,7 @@ using System;
 using System.Threading;
 using System.Net.NetworkInformation;
 
-namespace org.apache.rocketmq
+namespace Org.Apache.Rocketmq
 {
     /**
      * See https://yuque.antfin-inc.com/aone709911/ca1edg/af2t6o for Sequence ID spec.

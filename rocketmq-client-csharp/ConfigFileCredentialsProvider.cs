@@ -19,7 +19,7 @@ using System;
 using System.Text.Json;
 using System.Collections.Generic;
 
-namespace org.apache.rocketmq {
+namespace Org.Apache.Rocketmq {
 
     /**
      * File-based credentials provider that reads JSON configurations from ${HOME}/.rocketmq/config

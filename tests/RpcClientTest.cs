@@ -18,13 +18,12 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Grpc.Core.Interceptors;
 using System.Net.Http;
 using Grpc.Net.Client;
-using rmq = global::apache.rocketmq.v1;
+using rmq = global::Apache.Rocketmq.V1;
 using grpc = global::Grpc.Core;
 using System;
 using pb = global::Google.Protobuf;
 
-
-namespace org.apache.rocketmq
+namespace Org.Apache.Rocketmq
 {
     [TestClass]
     public class RpcClientTest

@@ -16,7 +16,7 @@
  */
  using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace org.apache.rocketmq {
+namespace Org.Apache.Rocketmq {
     [TestClass]
     public class BrokerTest {
 

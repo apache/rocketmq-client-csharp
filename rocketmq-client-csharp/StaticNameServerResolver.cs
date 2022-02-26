@@ -18,7 +18,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace org.apache.rocketmq
+namespace Org.Apache.Rocketmq
 {
     public class StaticNameServerResolver : INameServerResolver
     {

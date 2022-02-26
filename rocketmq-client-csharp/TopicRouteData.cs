@@ -14,43 +14,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 using System;
 using System.Collections.Generic;
 
-namespace org.apache.rocketmq {
-
-    public class TopicRouteData : IEquatable<TopicRouteData> {
-
-        public TopicRouteData(List<Partition> partitions) {
-            this.partitions = partitions;
-            this.partitions.Sort();
-        }
-
-        private List<Partition> partitions;
-
-        public List<Partition> Partitions {
-            get { return partitions; }
-        }
-
-        public bool Equals(TopicRouteData other) {
-            return partitions.Equals(other.partitions);
-        }
-
-        public override bool Equals(object other)
+namespace Org.Apache.Rocketmq
+{
+    public class TopicRouteData : IEquatable<TopicRouteData>
+    {
+        public TopicRouteData(List<Partition> partitions)
         {
+            Partitions = partitions;
+            Partitions.Sort();
+        }
 
-            if (!(other is TopicRouteData)) {
-                return false;
-            }
+        public List<Partition> Partitions { get; }
 
-            return Equals(other as TopicRouteData);
+        public bool Equals(TopicRouteData other)
+        {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(Partitions, other.Partitions);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((TopicRouteData)obj);
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(partitions);
+            return (Partitions != null ? Partitions.GetHashCode() : 0);
         }
-
     }
-
 }

@@ -19,7 +19,7 @@ using System.Text;
 using grpc = global::Grpc.Core;
 using System.Security.Cryptography;
 
-namespace org.apache.rocketmq {
+namespace Org.Apache.Rocketmq {
     public class Signature {
         public static void sign(IClientConfig clientConfig, grpc::Metadata metadata) {
             metadata.Add(MetadataConstants.LANGUAGE_KEY, "DOTNET");

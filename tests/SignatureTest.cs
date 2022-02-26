@@ -19,7 +19,7 @@ using grpc = global::Grpc.Core;
 using Moq;
 using System;
 
-namespace org.apache.rocketmq {
+namespace Org.Apache.Rocketmq {
 
     [TestClass]
     public class SignatureTest {
