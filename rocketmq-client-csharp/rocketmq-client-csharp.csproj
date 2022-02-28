@@ -6,7 +6,7 @@
     <Authors>Zhanhui Li</Authors>
     <Company>Apache Software Foundation</Company>
     <TargetFramework>net5.0</TargetFramework>
-    <RootNamespace>org.apache.rocketmq</RootNamespace>
+    <RootNamespace>Org.Apache.Rocketmq</RootNamespace>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 

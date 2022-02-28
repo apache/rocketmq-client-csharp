@@ -17,7 +17,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace org.apache.rocketmq
+namespace Org.Apache.Rocketmq
 {
     public class PublishLoadBalancer
     {
@@ -26,12 +26,12 @@ namespace org.apache.rocketmq
             this.partitions = new List<Partition>();
             foreach (var partition in route.Partitions)
             {
-                if (Permission.NONE == partition.Permission)
+                if (Permission.None == partition.Permission)
                 {
                     continue;
                 }
 
-                if (Permission.READ == partition.Permission)
+                if (Permission.Read == partition.Permission)
                 {
                     continue;
                 }
@@ -49,12 +49,12 @@ namespace org.apache.rocketmq
             List<Partition> partitions = new List<Partition>();
             foreach (var partition in route.Partitions)
             {
-                if (Permission.NONE == partition.Permission)
+                if (Permission.None == partition.Permission)
                 {
                     continue;
                 }
 
-                if (Permission.READ == partition.Permission)
+                if (Permission.Read == partition.Permission)
                 {
                     continue;
                 }

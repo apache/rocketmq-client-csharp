@@ -20,7 +20,7 @@ using System.Linq;
 using System.Net.NetworkInformation;
 using System.Text;
 
-namespace org.apache.rocketmq
+namespace Org.Apache.Rocketmq
 {
     public static class Utilities
     {

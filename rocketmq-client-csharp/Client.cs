@@ -20,12 +20,12 @@ using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
-using rmq = apache.rocketmq.v1;
+using Apache.Rocketmq.V1;
 using grpc = global::Grpc.Core;
 using NLog;
 
 
-namespace org.apache.rocketmq
+namespace Org.Apache.Rocketmq
 {
     public abstract class Client : ClientConfig, IClient
     {
@@ -33,41 +33,41 @@ namespace org.apache.rocketmq
 
         public Client(INameServerResolver resolver, string resourceNamespace)
         {
-            this.nameServerResolver = resolver;
-            this.resourceNamespace_ = resourceNamespace;
-            this.clientManager = ClientManagerFactory.getClientManager(resourceNamespace);
-            this.nameServerResolverCTS = new CancellationTokenSource();
+            _nameServerResolver = resolver;
+            _resourceNamespace = resourceNamespace;
+            Manager = ClientManagerFactory.getClientManager(resourceNamespace);
+            _nameServerResolverCts = new CancellationTokenSource();
 
-            this.topicRouteTable = new ConcurrentDictionary<string, TopicRouteData>();
-            this.updateTopicRouteCTS = new CancellationTokenSource();
+            _topicRouteTable = new ConcurrentDictionary<string, TopicRouteData>();
+            _updateTopicRouteCts = new CancellationTokenSource();
         }
 
         public virtual void Start()
         {
             schedule(async () =>
             {
-                await updateNameServerList();
-            }, 30, nameServerResolverCTS.Token);
+                await UpdateNameServerList();
+            }, 30, _nameServerResolverCts.Token);
 
             schedule(async () =>
             {
-                await updateTopicRoute();
+                await UpdateTopicRoute();
 
-            }, 30, updateTopicRouteCTS.Token);
+            }, 30, _updateTopicRouteCts.Token);
 
         }
 
         public virtual async Task Shutdown()
         {
-            Logger.Info($"Shutdown client[resource-namespace={resourceNamespace_}");
-            updateTopicRouteCTS.Cancel();
-            nameServerResolverCTS.Cancel();
-            await clientManager.Shutdown();
+            Logger.Info($"Shutdown client[resource-namespace={_resourceNamespace}");
+            _updateTopicRouteCts.Cancel();
+            _nameServerResolverCts.Cancel();
+            await Manager.Shutdown();
         }
 
-        private async Task updateNameServerList()
+        private async Task UpdateNameServerList()
         {
-            List<string> nameServers = await nameServerResolver.resolveAsync();
+            List<string> nameServers = await _nameServerResolver.resolveAsync();
             if (0 == nameServers.Count)
             {
                 // Whoops, something should be wrong. We got an empty name server list.
@@ -75,7 +75,7 @@ namespace org.apache.rocketmq
                 return;
             }
 
-            if (nameServers.Equals(this.nameServers))
+            if (nameServers.Equals(this._nameServers))
             {
                 Logger.Debug("Name server list remains unchanged");
                 return;
@@ -83,18 +83,18 @@ namespace org.apache.rocketmq
 
             // Name server list is updated. 
             // TODO: Locking is required
-            this.nameServers = nameServers;
-            this.currentNameServerIndex = 0;
+            this._nameServers = nameServers;
+            this._currentNameServerIndex = 0;
         }
 
-        private async Task updateTopicRoute()
+        private async Task UpdateTopicRoute()
         {
-            if (null == nameServers || 0 == nameServers.Count)
+            if (null == _nameServers || 0 == _nameServers.Count)
             {
-                List<string> list = await nameServerResolver.resolveAsync();
+                List<string> list = await _nameServerResolver.resolveAsync();
                 if (null != list && 0 != list.Count)
                 {
-                    this.nameServers = list;
+                    this._nameServers = list;
                 }
                 else
                 {
@@ -104,12 +104,12 @@ namespace org.apache.rocketmq
             }
 
             // We got one or more name servers available.
-            string nameServer = nameServers[currentNameServerIndex];
+            string nameServer = _nameServers[_currentNameServerIndex];
 
             List<Task<TopicRouteData>> tasks = new List<Task<TopicRouteData>>();
-            foreach (var item in topicRouteTable)
+            foreach (var item in _topicRouteTable)
             {
-                tasks.Add(getRouteFor(item.Key, true));
+                tasks.Add(GetRouteFor(item.Key, true));
             }
 
             // Update topic route data
@@ -127,10 +127,10 @@ namespace org.apache.rocketmq
                 }
 
                 var topicName = item.Partitions[0].Topic.Name;
-                var existing = topicRouteTable[topicName];
+                var existing = _topicRouteTable[topicName];
                 if (!existing.Equals(item))
                 {
-                    topicRouteTable[topicName] = item;
+                    _topicRouteTable[topicName] = item;
                 }
             }
         }
@@ -160,19 +160,19 @@ namespace org.apache.rocketmq
          * direct
          *    Indicate if we should by-pass cache and fetch route entries from name server.
          */
-        public async Task<TopicRouteData> getRouteFor(string topic, bool direct)
+        public async Task<TopicRouteData> GetRouteFor(string topic, bool direct)
         {
-            if (!direct && topicRouteTable.ContainsKey(topic))
+            if (!direct && _topicRouteTable.ContainsKey(topic))
             {
-                return topicRouteTable[topic];
+                return _topicRouteTable[topic];
             }
 
-            if (null == nameServers || 0 == nameServers.Count)
+            if (null == _nameServers || 0 == _nameServers.Count)
             {
-                List<string> list = await nameServerResolver.resolveAsync();
+                List<string> list = await _nameServerResolver.resolveAsync();
                 if (null != list && 0 != list.Count)
                 {
-                    this.nameServers = list;
+                    this._nameServers = list;
                 }
                 else
                 {
@@ -185,15 +185,15 @@ namespace org.apache.rocketmq
             for (int retry = 0; retry < MaxTransparentRetry; retry++)
             {
                 // We got one or more name servers available.
-                int index = (currentNameServerIndex + retry) % nameServers.Count;
-                string nameServer = nameServers[index];
-                var request = new rmq::QueryRouteRequest();
-                request.Topic = new rmq::Resource();
-                request.Topic.ResourceNamespace = resourceNamespace_;
+                int index = (_currentNameServerIndex + retry) % _nameServers.Count;
+                string nameServer = _nameServers[index];
+                var request = new QueryRouteRequest();
+                request.Topic = new Resource();
+                request.Topic.ResourceNamespace = _resourceNamespace;
                 request.Topic.Name = topic;
-                request.Endpoints = new rmq::Endpoints();
-                request.Endpoints.Scheme = rmq::AddressScheme.Ipv4;
-                var address = new rmq::Address();
+                request.Endpoints = new Endpoints();
+                request.Endpoints.Scheme = global::Apache.Rocketmq.V1.AddressScheme.Ipv4;
+                var address = new global::Apache.Rocketmq.V1.Address();
                 int pos = nameServer.LastIndexOf(':');
                 address.Host = nameServer.Substring(0, pos);
                 address.Port = Int32.Parse(nameServer.Substring(pos + 1));
@@ -201,12 +201,12 @@ namespace org.apache.rocketmq
                 var target = string.Format("https://{0}:{1}", address.Host, address.Port);
                 var metadata = new grpc.Metadata();
                 Signature.sign(this, metadata);
-                var topicRouteData = await clientManager.resolveRoute(target, metadata, request, getIoTimeout());
+                var topicRouteData = await Manager.ResolveRoute(target, metadata, request, getIoTimeout());
                 if (null != topicRouteData)
                 {
                     if (retry > 0)
                     {
-                        currentNameServerIndex = index;
+                        _currentNameServerIndex = index;
                     }
                     return topicRouteData;
                 }
@@ -214,9 +214,9 @@ namespace org.apache.rocketmq
             return null;
         }
 
-        public abstract void prepareHeartbeatData(rmq::HeartbeatRequest request);
+        public abstract void PrepareHeartbeatData(HeartbeatRequest request);
 
-        public void heartbeat()
+        public void Heartbeat()
         {
             List<string> endpoints = endpointsInUse();
             if (0 == endpoints.Count)
@@ -224,22 +224,22 @@ namespace org.apache.rocketmq
                 return;
             }
 
-            var heartbeatRequest = new rmq::HeartbeatRequest();
-            prepareHeartbeatData(heartbeatRequest);
+            var heartbeatRequest = new HeartbeatRequest();
+            PrepareHeartbeatData(heartbeatRequest);
 
             var metadata = new grpc::Metadata();
             Signature.sign(this, metadata);
         }
 
-        public void healthCheck()
+        public void HealthCheck()
         {
 
         }
 
-        public async Task<bool> notifyClientTermination()
+        public async Task<bool> NotifyClientTermination()
         {
             List<string> endpoints = endpointsInUse();
-            var request = new rmq::NotifyClientTerminationRequest();
+            var request = new NotifyClientTerminationRequest();
             request.ClientId = clientId();
 
             var metadata = new grpc.Metadata();
@@ -249,7 +249,7 @@ namespace org.apache.rocketmq
 
             foreach (var endpoint in endpoints)
             {
-                tasks.Add(clientManager.notifyClientTermination(endpoint, metadata, request, getIoTimeout()));
+                tasks.Add(Manager.NotifyClientTermination(endpoint, metadata, request, getIoTimeout()));
             }
 
             bool[] results = await Task.WhenAll(tasks);
@@ -269,14 +269,15 @@ namespace org.apache.rocketmq
             return new List<string>();
         }
 
-        protected IClientManager clientManager;
-        private INameServerResolver nameServerResolver;
-        private CancellationTokenSource nameServerResolverCTS;
-        private List<string> nameServers;
-        private int currentNameServerIndex;
+        protected readonly IClientManager Manager;
+        
+        private readonly INameServerResolver _nameServerResolver;
+        private readonly CancellationTokenSource _nameServerResolverCts;
+        private List<string> _nameServers;
+        private int _currentNameServerIndex;
 
-        private ConcurrentDictionary<string, TopicRouteData> topicRouteTable;
-        private CancellationTokenSource updateTopicRouteCTS;
+        private readonly ConcurrentDictionary<string, TopicRouteData> _topicRouteTable;
+        private readonly CancellationTokenSource _updateTopicRouteCts;
 
         protected const int MaxTransparentRetry = 3;
     }

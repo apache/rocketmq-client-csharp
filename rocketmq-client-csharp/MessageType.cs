@@ -14,9 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-using System;
 
-namespace org.apache.rocketmq
+namespace Org.Apache.Rocketmq
 {
     public enum MessageType {
         Normal,
@@ -24,5 +23,4 @@ namespace org.apache.rocketmq
         Delay,
         Transaction,
     }
-    
 }

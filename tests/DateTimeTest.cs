@@ -17,7 +17,7 @@
  using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 
-namespace org.apache.rocketmq {
+namespace Org.Apache.Rocketmq {
     
     [TestClass]
     public class DateTimeTest {

@@ -24,13 +24,12 @@ import "apache/rocketmq/v1/definition.proto";
 
 package apache.rocketmq.v1;
 
+option csharp_namespace = "Apache.Rocketmq.V1";
 option java_multiple_files = true;
 option java_package = "apache.rocketmq.v1";
 option java_generate_equals_and_hash = true;
 option java_string_check_utf8 = true;
 option java_outer_classname = "MQService";
-
-option csharp_namespace = "apache.rocketmq.v1";
 
 message ResponseCommon {
   google.rpc.Status status = 1;
@@ -386,13 +385,13 @@ message NotifyClientTerminationResponse {
 // errors raise, return a response with common.status.code == `INTERNAL`.
 service MessagingService {
 
-  // Queries the route entries of the requested topic in the perspective of the
+  // Querys the route entries of the requested topic in the perspective of the
   // given endpoints. On success, servers should return a collection of
   // addressable partitions. Note servers may return customized route entries
   // based on endpoints provided.
   //
   // If the requested topic doesn't exist, returns `NOT_FOUND`.
-  // If the specific endpoints is empty, returns `INVALID_ARGUMENT`.
+  // If the specific endpoints is emtpy, returns `INVALID_ARGUMENT`.
   rpc QueryRoute(QueryRouteRequest) returns (QueryRouteResponse) {}
 
   // Producer or consumer sends HeartbeatRequest to servers periodically to
@@ -425,17 +424,17 @@ service MessagingService {
   // If the destination topic doesn't exist, returns `NOT_FOUND`.
   rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {}
 
-  // Queries the assigned partition route info of a topic for current consumer,
-  // the returned assignment result is decided by server-side load balancer.
+  // Querys the assigned partition route info of a topic for current consumer,
+  // the returned assignment result is descided by server-side load balacner.
   //
   // If the corresponding topic doesn't exist, returns `NOT_FOUND`.
-  // If the specific endpoints is empty, returns `INVALID_ARGUMENT`.
+  // If the specific endpoints is emtpy, returns `INVALID_ARGUMENT`.
   rpc QueryAssignment(QueryAssignmentRequest)
       returns (QueryAssignmentResponse) {}
 
-  // Receives messages from the server in batch manner, returns a batch of
-  // messages if success. The received messages should be ACKed or NACKed after
-  // processing.
+  // Receives messages from the server in batch manner, returns a set of
+  // messages if success. The received messages should be acked or uacked after
+  // processed.
   //
   // If the pending concurrent receive requests exceed the quota of the given
   // consumer group, returns `UNAVAILABLE`. If the upstream store server hangs,
@@ -470,14 +469,14 @@ service MessagingService {
   // Commits or rollback one transactional message.
   rpc EndTransaction(EndTransactionRequest) returns (EndTransactionResponse) {}
 
-  // Queries the offset of the specific partition, returns the offset with `OK`
+  // Querys the offset of the specific partition, returns the offset with `OK`
   // if success. The message server should maintain a numerical offset for each
-  // message in a partition.
+  // message in a parition.
   rpc QueryOffset(QueryOffsetRequest) returns (QueryOffsetResponse) {}
 
   // Pulls messages from the specific partition, returns a set of messages with
-  // next pull offset. The pulled messages can't be ACKed or NACKed, while the
-  // client is responsible for manage offsets for consumer, typically update
+  // next pull offset. The pulled messages can't be acked or nacked, while the
+  // client is responsible for manage offesets for consumer, typically update
   // consume offset to local memory or a third-party storage service.
   //
   // If the pending concurrent receive requests exceed the quota of the given

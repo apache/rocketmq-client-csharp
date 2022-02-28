@@ -15,25 +15,20 @@
  * limitations under the License.
  */
 
+using System;
 using System.Collections.Generic;
 
-namespace org.apache.rocketmq {
-    public sealed class ServiceAddress {
-
-        public ServiceAddress(AddressScheme scheme, List<Address> addresses) {
-            this.scheme = scheme;
-            this.addresses = addresses;
+namespace Org.Apache.Rocketmq
+{
+    public sealed class ServiceAddress
+    {
+        public ServiceAddress(AddressScheme scheme, List<Address> addresses)
+        {
+            Scheme = scheme;
+            Addresses = addresses;
         }
 
-        private AddressScheme scheme;
-        public AddressScheme Scheme {
-            get { return scheme; }
-        }
-
-        private List<Address> addresses;
-        public List<Address> Addresses{
-            get { return addresses; }
-        }
-
+        public AddressScheme Scheme { get; }
+        public List<Address> Addresses { get; }
     }
 }

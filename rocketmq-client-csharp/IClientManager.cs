@@ -15,22 +15,22 @@
  * limitations under the License.
  */
 
-using apache.rocketmq.v1;
+using Apache.Rocketmq.V1;
 using System.Threading.Tasks;
 using System;
 using grpc = global::Grpc.Core;
 
-namespace org.apache.rocketmq {
+namespace Org.Apache.Rocketmq {
     public interface IClientManager {
-        IRpcClient getRpcClient(string target);
+        IRpcClient GetRpcClient(string target);
 
-        Task<TopicRouteData> resolveRoute(string target, grpc::Metadata metadata, QueryRouteRequest request, TimeSpan timeout);
+        Task<TopicRouteData> ResolveRoute(string target, grpc::Metadata metadata, QueryRouteRequest request, TimeSpan timeout);
 
-        Task<Boolean> heartbeat(string target, grpc::Metadata metadata, HeartbeatRequest request, TimeSpan timeout);
+        Task<Boolean> Heartbeat(string target, grpc::Metadata metadata, HeartbeatRequest request, TimeSpan timeout);
 
-        Task<Boolean> notifyClientTermination(string target, grpc::Metadata metadata, NotifyClientTerminationRequest request, TimeSpan timeout);
+        Task<Boolean> NotifyClientTermination(string target, grpc::Metadata metadata, NotifyClientTerminationRequest request, TimeSpan timeout);
 
-        Task<SendMessageResponse> sendMessage(string target, grpc::Metadata metadata, SendMessageRequest request, TimeSpan timeout);
+        Task<SendMessageResponse> SendMessage(string target, grpc::Metadata metadata, SendMessageRequest request, TimeSpan timeout);
 
         Task Shutdown();
     }

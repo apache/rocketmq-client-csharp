@@ -20,7 +20,7 @@ using Grpc.Core;
 using Grpc.Core.Interceptors;
 using NLog;
 
-namespace org.apache.rocketmq
+namespace Org.Apache.Rocketmq
 {
     public class ClientLoggerInterceptor : Interceptor
     {

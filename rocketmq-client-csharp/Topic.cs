@@ -17,14 +17,14 @@
 
 using System;
 
-namespace org.apache.rocketmq {
+namespace Org.Apache.Rocketmq {
     public class Topic : IComparable<Topic>, IEquatable<Topic> {
-        public Topic(string resource_namespace, string name) {
-            resourceNamespace = resource_namespace;
+        public Topic(string resourceNamespace, string name) {
+            this.resourceNamespace = resourceNamespace;
             this.name = name;
         }
 
-        private string resourceNamespace;
+        private readonly string resourceNamespace;
         public string ResourceNamespace {
             get { return resourceNamespace; }
         }

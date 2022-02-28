@@ -20,12 +20,12 @@ using System.Net.Http;
 using System.Net.Security;
 using System.Threading;
 using System.Threading.Tasks;
-using apache.rocketmq.v1;
+using Apache.Rocketmq.V1;
 using Grpc.Core;
 using Grpc.Core.Interceptors;
 using Grpc.Net.Client;
 
-namespace org.apache.rocketmq
+namespace Org.Apache.Rocketmq
 {
     public class RpcClient : IRpcClient
     {
