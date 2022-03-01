@@ -55,7 +55,7 @@ namespace Org.Apache.Rocketmq
             var msg = new Message(topic, body);
             var sendResult = producer.Send(msg).GetAwaiter().GetResult();
             Assert.IsNotNull(sendResult);
-            producer.Shutdown().GetAwaiter().GetResult();
+            producer.Shutdown();
         }
 
         private static string resourceNamespace = "MQ_INST_1080056302921134_BXuIbML7";

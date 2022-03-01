@@ -39,10 +39,10 @@ namespace Org.Apache.Rocketmq
             // More initalization
         }
 
-        public override async Task Shutdown()
+        public override void Shutdown()
         {
             // Release local resources
-            await base.Shutdown();
+            base.Shutdown();
         }
 
         public override void PrepareHeartbeatData(rmq::HeartbeatRequest request)

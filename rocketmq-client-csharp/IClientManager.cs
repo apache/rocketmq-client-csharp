@@ -18,7 +18,9 @@
 using Apache.Rocketmq.V1;
 using System.Threading.Tasks;
 using System;
+using System.Collections.Generic;
 using grpc = global::Grpc.Core;
+
 
 namespace Org.Apache.Rocketmq {
     public interface IClientManager {
@@ -31,6 +33,8 @@ namespace Org.Apache.Rocketmq {
         Task<Boolean> NotifyClientTermination(string target, grpc::Metadata metadata, NotifyClientTerminationRequest request, TimeSpan timeout);
 
         Task<SendMessageResponse> SendMessage(string target, grpc::Metadata metadata, SendMessageRequest request, TimeSpan timeout);
+
+        Task<List<Assignment>> QueryLoadAssignment(string target, grpc::Metadata metadata, QueryAssignmentRequest request, TimeSpan timeout);
 
         Task Shutdown();
     }

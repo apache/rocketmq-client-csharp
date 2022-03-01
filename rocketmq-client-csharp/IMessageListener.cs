@@ -15,14 +15,15 @@
  * limitations under the License.
  */
 
-using System.Threading.Tasks;
+using System.Collections.Generic;
 
-namespace Org.Apache.Rocketmq {
-    public interface IProducer {
-        void Start();
+namespace Org.Apache.Rocketmq
+{
 
-        void Shutdown();
+    public interface IMessageListener
+    {
+        void Consume(List<Message> messages, List<Message> failed);
 
-        Task<SendResult> Send(Message message);
     }
+
 }

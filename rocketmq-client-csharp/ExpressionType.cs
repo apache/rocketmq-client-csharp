@@ -14,15 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+namespace Org.Apache.Rocketmq
+{
 
-using System.Threading.Tasks;
-
-namespace Org.Apache.Rocketmq {
-    public interface IProducer {
-        void Start();
-
-        void Shutdown();
-
-        Task<SendResult> Send(Message message);
+    public enum ExpressionType
+    {
+        TAG,
+        SQL92,
     }
+
 }

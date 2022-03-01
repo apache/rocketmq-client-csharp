@@ -175,6 +175,24 @@ namespace Org.Apache.Rocketmq
             return response.Common.Status.Code == ((int)Google.Rpc.Code.Ok);
         }
 
+        public async Task<List<rmq::Assignment>> QueryLoadAssignment(string target, grpc::Metadata metadata, rmq::QueryAssignmentRequest request, TimeSpan timeout)
+        {
+            var rpcClient = GetRpcClient(target);
+            rmq::QueryAssignmentResponse response = await rpcClient.QueryAssignment(metadata, request, timeout);
+            if (response.Common.Status.Code != (int)Google.Rpc.Code.Ok)
+            {
+                // TODO: Build exception hierarchy
+                throw new Exception($"Failed to query load assignment from server. Cause: {response.Common.Status.Message}");
+            }
+
+            List<rmq::Assignment> assignments = new List<rmq.Assignment>();
+            foreach (var item in response.Assignments)
+            {
+                assignments.Add(item);
+            }
+            return assignments;
+        }
+
         public async Task Shutdown()
         {
             _clientLock.EnterReadLock();

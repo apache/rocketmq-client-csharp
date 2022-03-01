@@ -57,12 +57,28 @@ namespace Org.Apache.Rocketmq
 
         }
 
-        public virtual async Task Shutdown()
+        public virtual void Shutdown()
         {
             Logger.Info($"Shutdown client[resource-namespace={_resourceNamespace}");
             _updateTopicRouteCts.Cancel();
             _nameServerResolverCts.Cancel();
-            await Manager.Shutdown();
+            Manager.Shutdown().GetAwaiter().GetResult();
+        }
+
+        protected string FilterBroker(Func<string, bool> acceptor)
+        {
+            foreach (var item in _topicRouteTable)
+            {
+                foreach (var partition in item.Value.Partitions)
+                {
+                    string target = partition.Broker.targetUrl();
+                    if (acceptor(target))
+                    {
+                        return target;
+                    }
+                }
+            }
+            return null;
         }
 
         private async Task UpdateNameServerList()
@@ -153,6 +169,18 @@ namespace Org.Apache.Rocketmq
             });
         }
 
+        protected Endpoints AccessEndpoint(string nameServer)
+        {
+            var endpoints = new Endpoints();
+            endpoints.Scheme = global::Apache.Rocketmq.V1.AddressScheme.Ipv4;
+            var address = new global::Apache.Rocketmq.V1.Address();
+            int pos = nameServer.LastIndexOf(':');
+            address.Host = nameServer.Substring(0, pos);
+            address.Port = Int32.Parse(nameServer.Substring(pos + 1));
+            endpoints.Addresses.Add(address);
+            return endpoints;
+        }
+
         /**
          * Parameters:
          * topic
@@ -191,19 +219,14 @@ namespace Org.Apache.Rocketmq
                 request.Topic = new Resource();
                 request.Topic.ResourceNamespace = _resourceNamespace;
                 request.Topic.Name = topic;
-                request.Endpoints = new Endpoints();
-                request.Endpoints.Scheme = global::Apache.Rocketmq.V1.AddressScheme.Ipv4;
-                var address = new global::Apache.Rocketmq.V1.Address();
-                int pos = nameServer.LastIndexOf(':');
-                address.Host = nameServer.Substring(0, pos);
-                address.Port = Int32.Parse(nameServer.Substring(pos + 1));
-                request.Endpoints.Addresses.Add(address);
-                var target = string.Format("https://{0}:{1}", address.Host, address.Port);
+                request.Endpoints = AccessEndpoint(nameServer);
                 var metadata = new grpc.Metadata();
                 Signature.sign(this, metadata);
-                var topicRouteData = await Manager.ResolveRoute(target, metadata, request, getIoTimeout());
+                var topicRouteData = await Manager.ResolveRoute($"https://{nameServer}", metadata, request, getIoTimeout());
                 if (null != topicRouteData)
                 {
+                    _topicRouteTable.TryAdd(topic, topicRouteData);
+
                     if (retry > 0)
                     {
                         _currentNameServerIndex = index;
@@ -234,6 +257,24 @@ namespace Org.Apache.Rocketmq
         public void HealthCheck()
         {
 
+        }
+
+        public async Task<List<Assignment>> scanLoadAssignment(string topic, string group)
+        {
+            // Pick a broker randomly
+            string target = FilterBroker((s) => true);
+            var request = new QueryAssignmentRequest();
+            request.ClientId = clientId();
+            request.Topic = new Resource();
+            request.Topic.ResourceNamespace = _resourceNamespace;
+            request.Topic.Name = topic;
+            request.Group = new Resource();
+            request.Group.ResourceNamespace = _resourceNamespace;
+            request.Group.Name = group;
+            request.Endpoints = AccessEndpoint(_nameServers[_currentNameServerIndex]);
+            var metadata = new grpc::Metadata();
+            Signature.sign(this, metadata);
+            return await Manager.QueryLoadAssignment(target, metadata, request, getIoTimeout());
         }
 
         public async Task<bool> NotifyClientTermination()

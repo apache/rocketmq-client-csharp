@@ -14,15 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+namespace Org.Apache.Rocketmq
+{
+    public class FilterExpression
+    {
 
-using System.Threading.Tasks;
+        public FilterExpression(string expression, ExpressionType type)
+        {
+            _expression = expression;
+            _type = type;
+        }
 
-namespace Org.Apache.Rocketmq {
-    public interface IProducer {
-        void Start();
+        private ExpressionType _type;
 
-        void Shutdown();
+        private string _expression;
 
-        Task<SendResult> Send(Message message);
+        public ExpressionType Type
+        {
+            get { return _type; }
+        }
+
+        public string Expression
+        {
+            get { return _expression; }
+        }
+
     }
 }
