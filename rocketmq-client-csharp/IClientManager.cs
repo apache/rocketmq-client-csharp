@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using grpc = global::Grpc.Core;
+using rmq = Apache.Rocketmq.V1;
 
 
 namespace Org.Apache.Rocketmq {
@@ -35,6 +36,13 @@ namespace Org.Apache.Rocketmq {
         Task<SendMessageResponse> SendMessage(string target, grpc::Metadata metadata, SendMessageRequest request, TimeSpan timeout);
 
         Task<List<Assignment>> QueryLoadAssignment(string target, grpc::Metadata metadata, QueryAssignmentRequest request, TimeSpan timeout);
+
+        Task<List<Message>> ReceiveMessage(string target, grpc::Metadata metadata, ReceiveMessageRequest request, TimeSpan timeout);
+
+
+        Task<Boolean> Ack(string target, grpc::Metadata metadata, AckMessageRequest request, TimeSpan timeout);
+
+        Task<Boolean> Nack(string target, grpc::Metadata metadata, NackMessageRequest request, TimeSpan timeout);
 
         Task Shutdown();
     }

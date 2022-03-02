@@ -20,7 +20,7 @@ using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
-using Apache.Rocketmq.V1;
+using rmq = Apache.Rocketmq.V1;
 using grpc = global::Grpc.Core;
 using NLog;
 
@@ -169,9 +169,9 @@ namespace Org.Apache.Rocketmq
             });
         }
 
-        protected Endpoints AccessEndpoint(string nameServer)
+        protected rmq::Endpoints AccessEndpoint(string nameServer)
         {
-            var endpoints = new Endpoints();
+            var endpoints = new rmq::Endpoints();
             endpoints.Scheme = global::Apache.Rocketmq.V1.AddressScheme.Ipv4;
             var address = new global::Apache.Rocketmq.V1.Address();
             int pos = nameServer.LastIndexOf(':');
@@ -215,8 +215,8 @@ namespace Org.Apache.Rocketmq
                 // We got one or more name servers available.
                 int index = (_currentNameServerIndex + retry) % _nameServers.Count;
                 string nameServer = _nameServers[index];
-                var request = new QueryRouteRequest();
-                request.Topic = new Resource();
+                var request = new rmq::QueryRouteRequest();
+                request.Topic = new rmq::Resource();
                 request.Topic.ResourceNamespace = _resourceNamespace;
                 request.Topic.Name = topic;
                 request.Endpoints = AccessEndpoint(nameServer);
@@ -237,7 +237,7 @@ namespace Org.Apache.Rocketmq
             return null;
         }
 
-        public abstract void PrepareHeartbeatData(HeartbeatRequest request);
+        public abstract void PrepareHeartbeatData(rmq::HeartbeatRequest request);
 
         public void Heartbeat()
         {
@@ -247,7 +247,7 @@ namespace Org.Apache.Rocketmq
                 return;
             }
 
-            var heartbeatRequest = new HeartbeatRequest();
+            var heartbeatRequest = new rmq::HeartbeatRequest();
             PrepareHeartbeatData(heartbeatRequest);
 
             var metadata = new grpc::Metadata();
@@ -259,16 +259,16 @@ namespace Org.Apache.Rocketmq
 
         }
 
-        public async Task<List<Assignment>> scanLoadAssignment(string topic, string group)
+        public async Task<List<rmq::Assignment>> scanLoadAssignment(string topic, string group)
         {
             // Pick a broker randomly
             string target = FilterBroker((s) => true);
-            var request = new QueryAssignmentRequest();
+            var request = new rmq::QueryAssignmentRequest();
             request.ClientId = clientId();
-            request.Topic = new Resource();
+            request.Topic = new rmq::Resource();
             request.Topic.ResourceNamespace = _resourceNamespace;
             request.Topic.Name = topic;
-            request.Group = new Resource();
+            request.Group = new rmq::Resource();
             request.Group.ResourceNamespace = _resourceNamespace;
             request.Group.Name = group;
             request.Endpoints = AccessEndpoint(_nameServers[_currentNameServerIndex]);
@@ -277,10 +277,74 @@ namespace Org.Apache.Rocketmq
             return await Manager.QueryLoadAssignment(target, metadata, request, getIoTimeout());
         }
 
+        private string TargetUrl(rmq::Assignment assignment)
+        {
+            var broker = assignment.Partition.Broker;
+            var addresses = broker.Endpoints.Addresses;
+            // TODO: use the first address for now. 
+            var address = addresses[0];
+            return $"https://{address.Host}:{address.Port}";
+        }
+
+
+        public async Task<List<Message>> ReceiveMessage(rmq::Assignment assignment, string group)
+        {
+            var targetUrl = TargetUrl(assignment);
+            var metadata = new grpc::Metadata();
+            Signature.sign(this, metadata);
+            var request = new rmq::ReceiveMessageRequest();
+            request.Group = new rmq::Resource();
+            request.Group.ResourceNamespace = _resourceNamespace;
+            request.Group.Name = group;
+            request.Partition = assignment.Partition;
+            var messages = await Manager.ReceiveMessage(targetUrl, metadata, request, getIoTimeout());
+            return messages;
+        }
+
+        public async Task<Boolean> Ack(string target, string group, string topic, string receiptHandle, String messageId)
+        {
+            var request = new rmq::AckMessageRequest();
+            request.ClientId = clientId();
+            request.ReceiptHandle = receiptHandle;
+            request.Group = new rmq::Resource();
+            request.Group.ResourceNamespace = _resourceNamespace;
+            request.Group.Name = group;
+
+            request.Topic = new rmq::Resource();
+            request.Topic.ResourceNamespace = _resourceNamespace;
+            request.Topic.Name = topic;
+
+            request.MessageId = messageId;
+
+            var metadata = new grpc::Metadata();
+            Signature.sign(this, metadata);
+            return await Manager.Ack(target, metadata, request, getIoTimeout());
+        }
+
+        public async Task<Boolean> Nack(string target, string group, string topic, string receiptHandle, String messageId)
+        {
+            var request = new rmq::NackMessageRequest();
+            request.ClientId = clientId();
+            request.ReceiptHandle = receiptHandle;
+            request.Group = new rmq::Resource();
+            request.Group.ResourceNamespace = _resourceNamespace;
+            request.Group.Name = group;
+
+            request.Topic = new rmq::Resource();
+            request.Topic.ResourceNamespace = _resourceNamespace;
+            request.Topic.Name = topic;
+
+            request.MessageId = messageId;
+
+            var metadata = new grpc::Metadata();
+            Signature.sign(this, metadata);
+            return await Manager.Nack(target, metadata, request, getIoTimeout());
+        }
+
         public async Task<bool> NotifyClientTermination()
         {
             List<string> endpoints = endpointsInUse();
-            var request = new NotifyClientTerminationRequest();
+            var request = new rmq::NotifyClientTerminationRequest();
             request.ClientId = clientId();
 
             var metadata = new grpc.Metadata();

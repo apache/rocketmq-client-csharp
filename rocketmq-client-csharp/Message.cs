@@ -39,11 +39,22 @@ namespace Org.Apache.Rocketmq
             this.systemProperties = new Dictionary<string, string>();
         }
 
-        private string messageId;
+        internal string messageId;
         public string MessageId
         {
             get { return messageId; }
         }
+
+        internal string _receiptHandle;
+        internal string _sourceHost;
+
+        internal int _deliveryAttempt;
+        public int DeliveryAttempt
+        {
+            get { return _deliveryAttempt; }
+        }
+
+        internal bool _bodyChecksumVerified = true;
 
         private string topic;
 

@@ -14,17 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
 namespace Org.Apache.Rocketmq
 {
-
-    public interface IMessageListener
+    public class ProcessQueue
     {
-        Task Consume(List<Message> messages, List<Message> failed);
+
+
+
+        public bool Dropped { get; set; }
 
     }
-
 }
