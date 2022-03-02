@@ -36,7 +36,8 @@ namespace Org.Apache.Rocketmq
             _topicFilterExpressionMap = new ConcurrentDictionary<string, FilterExpression>();
             _topicAssignmentsMap = new ConcurrentDictionary<string, List<rmq::Assignment>>();
             _processQueueMap = new ConcurrentDictionary<Assignment, ProcessQueue>();
-
+            _scanAssignmentCTS = new CancellationTokenSource();
+            _scanExpiredProcessQueueCTS = new CancellationTokenSource();
         }
 
         public override void Start()
@@ -55,11 +56,12 @@ namespace Org.Apache.Rocketmq
             {
                 await scanLoadAssignments();
             }, 10, _scanAssignmentCTS.Token);
-
         }
 
         public override void Shutdown()
         {
+            _scanAssignmentCTS.Cancel();
+            _scanExpiredProcessQueueCTS.Cancel();
 
             // Shutdown resources of derived class
             base.Shutdown();
@@ -82,6 +84,20 @@ namespace Org.Apache.Rocketmq
                 }
 
                 checkAndUpdateAssignments(assignments);
+            }
+        }
+
+        private async Task scanExpiredProcessQueue()
+        {
+            foreach (var item in _processQueueMap)
+            {
+                if (item.Value.Expired())
+                {
+                    Task.Run(async () =>
+                    {
+                        await ExecutePop0(item.Key);
+                    });
+                }
             }
         }
 
@@ -124,8 +140,10 @@ namespace Org.Apache.Rocketmq
             var processQueue = new ProcessQueue();
             if (_processQueueMap.TryAdd(assignment, processQueue))
             {
-
-
+                Task.Run(async () =>
+                {
+                    await ExecutePop0(assignment);
+                });
             }
         }
 
@@ -133,39 +151,50 @@ namespace Org.Apache.Rocketmq
         {
             while (true)
             {
-                ProcessQueue processQueue;
-                if (!_processQueueMap.TryGetValue(assignment, out processQueue))
+                try
                 {
-                    break;
-                }
-
-                if (processQueue.Dropped)
-                {
-                    break;
-                }
-
-                List<Message> messages = await base.ReceiveMessage(assignment, _group);
-
-                List<Message> failed = new List<Message>();
-                await _messageListener.Consume(messages, failed);
-
-                foreach (var message in failed)
-                {
-                    // TODO: change its invisible time according to its delivery time
-                    await base.Nack(message._sourceHost, _group, message.Topic, message._receiptHandle, message.MessageId);
-                }
-
-                foreach (var message in messages)
-                {
-                    if (!failed.Contains(message))
+                    ProcessQueue processQueue;
+                    if (!_processQueueMap.TryGetValue(assignment, out processQueue))
                     {
-                        bool success = await base.Ack(message._sourceHost, _group, message.Topic, message._receiptHandle, message.MessageId);
-                        if (!success)
+                        break;
+                    }
+
+                    if (processQueue.Dropped)
+                    {
+                        break;
+                    }
+
+                    List<Message> messages = await base.ReceiveMessage(assignment, _group);
+                    processQueue.LastReceiveTime = System.DateTime.UtcNow;
+
+                    // TODO: cache message and dispatch them 
+
+                    List<Message> failed = new List<Message>();
+                    await _messageListener.Consume(messages, failed);
+
+                    foreach (var message in failed)
+                    {
+                        await base.Nack(message._sourceHost, _group, message.Topic, message._receiptHandle, message.MessageId);
+                    }
+
+                    foreach (var message in messages)
+                    {
+                        if (!failed.Contains(message))
                         {
-                            //TODO: log error.
+                            bool success = await base.Ack(message._sourceHost, _group, message.Topic, message._receiptHandle, message.MessageId);
+                            if (!success)
+                            {
+                                //TODO: log error.
+                            }
                         }
                     }
                 }
+                catch (System.Exception e)
+                {
+                    // TODO: log exception raised.
+                }
+
+
             }
         }
 
@@ -240,6 +269,8 @@ namespace Org.Apache.Rocketmq
         private ConcurrentDictionary<string, List<rmq::Assignment>> _topicAssignmentsMap;
 
         private ConcurrentDictionary<Assignment, ProcessQueue> _processQueueMap;
+
+        private CancellationTokenSource _scanExpiredProcessQueueCTS;
 
     }
 
