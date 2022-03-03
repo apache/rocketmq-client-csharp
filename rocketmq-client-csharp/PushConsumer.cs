@@ -37,7 +37,7 @@ namespace Org.Apache.Rocketmq
             _scanExpiredProcessQueueCTS = new CancellationTokenSource();
         }
 
-        public override void Start()
+        public override async void Start()
         {
             if (null == _messageListener)
             {
@@ -55,6 +55,7 @@ namespace Org.Apache.Rocketmq
             Task.WhenAll(queryRouteTasks).GetAwaiter().GetResult();
 
             // Step-2: Send heartbeats to all involving brokers.
+            await Heartbeat();
 
 
             // Step-3: Scan load assignments that are assigned to current client

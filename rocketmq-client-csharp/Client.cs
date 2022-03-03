@@ -285,6 +285,7 @@ namespace Org.Apache.Rocketmq
             List<string> endpoints = AvailableBrokerEndpoints();
             if (0 == endpoints.Count)
             {
+                Logger.Debug("No broker endpoints available in topic route");
                 return;
             }
 
