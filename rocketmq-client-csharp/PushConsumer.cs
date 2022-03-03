@@ -20,9 +20,6 @@ using System.Collections.Generic;
 using rmq = Apache.Rocketmq.V1;
 using System.Threading;
 using System.Threading.Tasks;
-using grpc = global::Grpc.Core;
-
-
 
 namespace Org.Apache.Rocketmq
 {
@@ -56,6 +53,11 @@ namespace Org.Apache.Rocketmq
             {
                 await scanLoadAssignments();
             }, 10, _scanAssignmentCTS.Token);
+
+            schedule(async () =>
+            {
+                await scanExpiredProcessQueue();
+            }, 10, _scanExpiredProcessQueueCTS.Token);
         }
 
         public override void Shutdown()
