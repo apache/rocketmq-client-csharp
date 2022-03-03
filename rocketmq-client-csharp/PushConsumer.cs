@@ -39,6 +39,11 @@ namespace Org.Apache.Rocketmq
 
         public override void Start()
         {
+            if (null == _messageListener)
+            {
+                throw new System.Exception("Bad configuration: message listener is required");
+            }
+
             base.Start();
 
             // Step-1: Resolve topic routes
@@ -47,9 +52,12 @@ namespace Org.Apache.Rocketmq
             {
                 queryRouteTasks.Add(GetRouteFor(item.Key, true));
             }
-            Task.WhenAny(queryRouteTasks).GetAwaiter().GetResult();
+            Task.WhenAll(queryRouteTasks).GetAwaiter().GetResult();
 
-            // Step-2: Scan load assignments that are assigned to current client
+            // Step-2: Send heartbeats to all involving brokers.
+
+
+            // Step-3: Scan load assignments that are assigned to current client
             schedule(async () =>
             {
                 await scanLoadAssignments();

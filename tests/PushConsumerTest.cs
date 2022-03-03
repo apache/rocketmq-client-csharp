@@ -17,9 +17,30 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 using System;
+using System.Threading.Tasks;
 
 namespace Org.Apache.Rocketmq
 {
+
+    public class TestMessageListener : IMessageListener
+    {
+        public async Task Consume(List<Message> messages, List<Message> failed)
+        {
+        }
+
+    }
+
+    public class CountableMessageListener : IMessageListener
+    {
+        public async Task Consume(List<Message> messages, List<Message> failed)
+        {
+            foreach (var message in messages)
+            {
+                Console.WriteLine("{}", message.MessageId);
+            }
+        }
+
+    }
 
     [TestClass]
     public class PushConsumerTest
@@ -48,9 +69,28 @@ namespace Org.Apache.Rocketmq
             consumer.CredentialsProvider = new ConfigFileCredentialsProvider();
             consumer.Region = "cn-hangzhou-pre";
             consumer.Subscribe(topic, "*", ExpressionType.TAG);
+            consumer.RegisterListener(new TestMessageListener());
             consumer.Start();
 
             consumer.Shutdown();
+        }
+
+
+        [TestMethod]
+        public void testConsumeMessage()
+        {
+
+            var consumer = new PushConsumer(resolver, resourceNamespace, group);
+            consumer.CredentialsProvider = new ConfigFileCredentialsProvider();
+            consumer.Region = "cn-hangzhou-pre";
+            consumer.Subscribe(topic, "*", ExpressionType.TAG);
+            consumer.RegisterListener(new CountableMessageListener());
+            consumer.Start();
+
+            System.Threading.Thread.Sleep(System.TimeSpan.FromSeconds(30));
+
+            consumer.Shutdown();
+
         }
 
 

@@ -40,6 +40,8 @@ namespace Org.Apache.Rocketmq
 
             _topicRouteTable = new ConcurrentDictionary<string, TopicRouteData>();
             _updateTopicRouteCts = new CancellationTokenSource();
+
+            _healthCheckCts = new CancellationTokenSource();
         }
 
         public virtual void Start()
@@ -54,6 +56,11 @@ namespace Org.Apache.Rocketmq
                 await UpdateTopicRoute();
 
             }, 30, _updateTopicRouteCts.Token);
+
+            schedule(async () =>
+            {
+                await HealthCheck();
+            }, 30, _healthCheckCts.Token);
 
         }
 
@@ -79,6 +86,26 @@ namespace Org.Apache.Rocketmq
                 }
             }
             return null;
+        }
+
+        /**
+         * Return all endpoints of brokers in route table.
+         */
+        private List<string> AvailableBrokerEndpoints()
+        {
+            List<string> endpoints = new List<string>();
+            foreach (var item in _topicRouteTable)
+            {
+                foreach (var partition in item.Value.Partitions)
+                {
+                    string endpoint = partition.Broker.targetUrl();
+                    if (!endpoints.Contains(endpoint))
+                    {
+                        endpoints.Add(endpoint);
+                    }
+                }
+            }
+            return endpoints;
         }
 
         private async Task UpdateNameServerList()
@@ -253,22 +280,60 @@ namespace Org.Apache.Rocketmq
 
         public abstract void PrepareHeartbeatData(rmq::HeartbeatRequest request);
 
-        public void Heartbeat()
+        public async Task Heartbeat()
         {
-            List<string> endpoints = endpointsInUse();
+            List<string> endpoints = AvailableBrokerEndpoints();
             if (0 == endpoints.Count)
             {
                 return;
             }
 
-            var heartbeatRequest = new rmq::HeartbeatRequest();
-            PrepareHeartbeatData(heartbeatRequest);
+            var request = new rmq::HeartbeatRequest();
+            PrepareHeartbeatData(request);
 
             var metadata = new grpc::Metadata();
             Signature.sign(this, metadata);
+
+            List<Task> tasks = new List<Task>();
+            foreach (var endpoint in endpoints)
+            {
+                tasks.Add(Manager.Heartbeat(endpoint, metadata, request, getIoTimeout()));
+            }
+
+            await Task.WhenAll(tasks);
         }
 
-        public void HealthCheck()
+        private List<string> BlockedBrokerEndpoints()
+        {
+            List<string> endpoints = new List<string>();
+            return endpoints;
+        }
+
+        public async Task HealthCheck()
+        {
+            var request = new rmq::HealthCheckRequest();
+
+            var metadata = new grpc::Metadata();
+            Signature.sign(this, metadata);
+            List<Task<Boolean>> tasks = new List<Task<Boolean>>();
+            List<string> endpoints = BlockedBrokerEndpoints();
+            foreach (var endpoint in endpoints)
+            {
+                tasks.Add(Manager.HealthCheck(endpoint, metadata, request, getIoTimeout()));
+            }
+            var result = await Task.WhenAll(tasks);
+            int i = 0;
+            foreach (var ok in result)
+            {
+                if (ok)
+                {
+                    RemoveFromBlockList(endpoints[i]);
+                }
+                ++i;
+            }
+        }
+
+        private void RemoveFromBlockList(string endpoint)
         {
 
         }
@@ -357,7 +422,7 @@ namespace Org.Apache.Rocketmq
 
         public async Task<bool> NotifyClientTermination()
         {
-            List<string> endpoints = endpointsInUse();
+            List<string> endpoints = AvailableBrokerEndpoints();
             var request = new rmq::NotifyClientTerminationRequest();
             request.ClientId = clientId();
 
@@ -382,12 +447,6 @@ namespace Org.Apache.Rocketmq
             return true;
         }
 
-        private List<string> endpointsInUse()
-        {
-            //TODO: gather endpoints from route entries.
-            return new List<string>();
-        }
-
         protected readonly IClientManager Manager;
         
         private readonly INameServerResolver _nameServerResolver;
@@ -397,6 +456,8 @@ namespace Org.Apache.Rocketmq
 
         private readonly ConcurrentDictionary<string, TopicRouteData> _topicRouteTable;
         private readonly CancellationTokenSource _updateTopicRouteCts;
+
+        private readonly CancellationTokenSource _healthCheckCts;
 
         protected const int MaxTransparentRetry = 3;
     }

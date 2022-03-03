@@ -24,11 +24,14 @@ using System.Threading.Tasks;
 using grpc = Grpc.Core;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using NLog;
 
 namespace Org.Apache.Rocketmq
 {
     public class ClientManager : IClientManager
     {
+        private static readonly Logger Logger = MqLogManager.Instance.GetCurrentClassLogger();
+
         public ClientManager()
         {
             _rpcClients = new Dictionary<string, RpcClient>();
@@ -159,6 +162,21 @@ namespace Org.Apache.Rocketmq
             }
 
             return response.Common.Status.Code == (int)Google.Rpc.Code.Ok;
+        }
+
+        public async Task<Boolean> HealthCheck(string target, grpc::Metadata metadata, rmq::HealthCheckRequest request, TimeSpan timeout)
+        {
+            var rpcClient = GetRpcClient(target);
+            try
+            {
+                var response = await rpcClient.HealthCheck(metadata, request, timeout);
+                return response.Common.Status.Code == (int)Google.Rpc.Code.Ok;
+            }
+            catch (System.Exception e)
+            {
+                Logger.Debug(e, $"Health-check to {target} failed");
+                return false;
+            }
         }
 
         public async Task<rmq::SendMessageResponse> SendMessage(string target, grpc::Metadata metadata,

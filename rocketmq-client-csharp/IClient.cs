@@ -16,15 +16,16 @@
  */
 
 using System.Threading.Tasks;
+using System;
 
 namespace Org.Apache.Rocketmq
 {
     public interface IClient : IClientConfig
     {
 
-        void Heartbeat();
+        Task Heartbeat();
 
-        void HealthCheck();
+        Task HealthCheck();
 
         Task<bool> NotifyClientTermination();
 
