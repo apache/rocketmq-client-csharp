@@ -352,9 +352,18 @@ namespace Org.Apache.Rocketmq
             request.Group.ResourceNamespace = _resourceNamespace;
             request.Group.Name = group;
             request.Endpoints = AccessEndpoint(_nameServers[_currentNameServerIndex]);
-            var metadata = new grpc::Metadata();
-            Signature.sign(this, metadata);
-            return await Manager.QueryLoadAssignment(target, metadata, request, getIoTimeout());
+            try
+            {
+                var metadata = new grpc::Metadata();
+                Signature.sign(this, metadata);
+                return await Manager.QueryLoadAssignment(target, metadata, request, getIoTimeout());
+            }
+            catch (System.Exception e)
+            {
+                Logger.Warn(e, $"Failed to acquire load assignments from {target}");
+            }
+            // Just return an empty list.
+            return new List<rmq.Assignment>();
         }
 
         private string TargetUrl(rmq::Assignment assignment)

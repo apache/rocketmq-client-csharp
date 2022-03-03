@@ -76,6 +76,7 @@ namespace Org.Apache.Rocketmq
         }
 
 
+        [Ignore]
         [TestMethod]
         public void testConsumeMessage()
         {
@@ -87,10 +88,9 @@ namespace Org.Apache.Rocketmq
             consumer.RegisterListener(new CountableMessageListener());
             consumer.Start();
 
-            System.Threading.Thread.Sleep(System.TimeSpan.FromSeconds(30));
+            System.Threading.Thread.Sleep(System.TimeSpan.FromSeconds(3));
 
             consumer.Shutdown();
-
         }
 
 

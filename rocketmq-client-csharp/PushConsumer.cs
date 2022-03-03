@@ -54,9 +54,8 @@ namespace Org.Apache.Rocketmq
             }
             Task.WhenAll(queryRouteTasks).GetAwaiter().GetResult();
 
-            // Step-2: Send heartbeats to all involving brokers.
+            // Step-2: Send heartbeats to all involving brokers so that we may get immediate, valid assignments.
             await Heartbeat();
-
 
             // Step-3: Scan load assignments that are assigned to current client
             schedule(async () =>
@@ -252,6 +251,7 @@ namespace Org.Apache.Rocketmq
                         break;
                 }
                 sub.Expression.Expression = item.Value.Expression;
+                consumerData.Subscriptions.Add(sub);
             }
             request.ConsumerData = consumerData;
         }

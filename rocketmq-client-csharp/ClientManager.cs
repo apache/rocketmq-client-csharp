@@ -156,11 +156,7 @@ namespace Org.Apache.Rocketmq
         {
             var rpcClient = GetRpcClient(target);
             var response = await rpcClient.Heartbeat(metadata, request, timeout);
-            if (null == response)
-            {
-                return false;
-            }
-
+            Logger.Debug($"Heartbeat to {target} response status: {response.Common.Status.ToString()}");
             return response.Common.Status.Code == (int)Google.Rpc.Code.Ok;
         }
 

@@ -114,6 +114,20 @@ namespace Org.Apache.Rocketmq
             var response = rpcClient.SendMessage(metadata, request, TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
         }
 
+        [TestMethod]
+        public void testHealthCheck()
+        {
+            var request = new rmq::HealthCheckRequest();
+            request.Group = new rmq::Resource();
+            request.Group.ResourceNamespace = resourceNamespace;
+            request.Group.Name = group;
+            request.ClientHost = "test";
+            var metadata = new grpc::Metadata();
+            Signature.sign(clientConfig, metadata);
+            var response = rpcClient.HealthCheck(metadata, request, TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
+            Assert.AreEqual("ok", response.Common.Status.Message);
+        }
+
         // Remove the Ignore annotation if server has fixed
         [Ignore]
         [TestMethod]
