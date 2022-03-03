@@ -85,6 +85,7 @@ namespace Org.Apache.Rocketmq
             Signature.sign(clientConfig, metadata);
             
             var response = rpcClient.Heartbeat(metadata, request, TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
+            Assert.AreEqual("ok", response.Common.Status.Message);
         }
 
         [TestMethod]
@@ -126,6 +127,32 @@ namespace Org.Apache.Rocketmq
             Signature.sign(clientConfig, metadata);
             var response = rpcClient.HealthCheck(metadata, request, TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
             Assert.AreEqual("ok", response.Common.Status.Message);
+        }
+
+        [TestMethod]
+        public void testQueryAssignment()
+        {
+            testHeartbeat();
+            var request = new rmq::QueryAssignmentRequest();
+
+        }
+
+        [TestMethod]
+        public void testReceiveMessage()
+        {
+
+        }
+
+        [TestMethod]
+        public void testAck()
+        {
+
+        }
+
+        [TestMethod]
+        public void testNack()
+        {
+
         }
 
         // Remove the Ignore annotation if server has fixed
