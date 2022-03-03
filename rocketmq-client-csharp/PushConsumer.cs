@@ -49,6 +49,7 @@ namespace Org.Apache.Rocketmq
             }
             Task.WhenAny(queryRouteTasks).GetAwaiter().GetResult();
 
+            // Step-2: Scan load assignments that are assigned to current client
             schedule(async () =>
             {
                 await scanLoadAssignments();

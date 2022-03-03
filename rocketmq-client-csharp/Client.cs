@@ -222,16 +222,30 @@ namespace Org.Apache.Rocketmq
                 request.Endpoints = AccessEndpoint(nameServer);
                 var metadata = new grpc.Metadata();
                 Signature.sign(this, metadata);
-                var topicRouteData = await Manager.ResolveRoute($"https://{nameServer}", metadata, request, getIoTimeout());
-                if (null != topicRouteData)
+                string target = $"https://{nameServer}";
+                TopicRouteData topicRouteData;
+                try
                 {
-                    _topicRouteTable.TryAdd(topic, topicRouteData);
-
-                    if (retry > 0)
+                    topicRouteData = await Manager.ResolveRoute(target, metadata, request, getIoTimeout());
+                    if (null != topicRouteData)
                     {
-                        _currentNameServerIndex = index;
+                        Logger.Debug($"Got route entries for {topic} from name server");
+                        _topicRouteTable.TryAdd(topic, topicRouteData);
+
+                        if (retry > 0)
+                        {
+                            _currentNameServerIndex = index;
+                        }
+                        return topicRouteData;
                     }
-                    return topicRouteData;
+                    else
+                    {
+                        Logger.Warn($"Failed to query route of {topic} from {target}");
+                    }
+                }
+                catch (System.Exception e)
+                {
+                    Logger.Warn(e, "Failed when querying route");
                 }
             }
             return null;
