@@ -63,9 +63,9 @@ namespace Org.Apache.Rocketmq
                 await scanLoadAssignments();
             }, 10, _scanAssignmentCTS.Token);
 
-            schedule(async () =>
+            schedule(() =>
             {
-                await scanExpiredProcessQueue();
+                ScanExpiredProcessQueue();
             }, 10, _scanExpiredProcessQueueCTS.Token);
         }
 
@@ -98,7 +98,7 @@ namespace Org.Apache.Rocketmq
             }
         }
 
-        private async Task scanExpiredProcessQueue()
+        private void ScanExpiredProcessQueue()
         {
             foreach (var item in _processQueueMap)
             {
