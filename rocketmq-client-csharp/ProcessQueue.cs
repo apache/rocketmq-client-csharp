@@ -14,20 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-using System.Threading.Tasks;
 using System;
-
 namespace Org.Apache.Rocketmq
 {
-    public interface IClient : IClientConfig
+    public class ProcessQueue
     {
 
-        Task Heartbeat();
+        public ProcessQueue()
+        {
+            _lastReceivedTime = DateTime.UtcNow;
+        }
+        public bool Dropped { get; set; }
 
-        Task HealthCheck();
+        private DateTime _lastReceivedTime;
 
-        Task<bool> NotifyClientTermination();
+        public DateTime LastReceiveTime
+        {
+            get { return _lastReceivedTime; }
+            set { _lastReceivedTime = value; }
+        }
+
+        internal bool Expired()
+        {
+            return DateTime.UtcNow.Subtract(_lastReceivedTime).TotalMilliseconds > 30 * 1000;
+        }
 
     }
 }

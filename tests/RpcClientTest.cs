@@ -15,13 +15,12 @@
  * limitations under the License.
  */
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Grpc.Core.Interceptors;
-using System.Net.Http;
-using Grpc.Net.Client;
 using rmq = global::Apache.Rocketmq.V1;
 using grpc = global::Grpc.Core;
 using System;
 using pb = global::Google.Protobuf;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Org.Apache.Rocketmq
 {
@@ -65,8 +64,20 @@ namespace Org.Apache.Rocketmq
 
             var metadata = new grpc::Metadata();
             Signature.sign(clientConfig, metadata);
-            
-            var response = rpcClient.QueryRoute(metadata, request, TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
+
+            // Execute route query multiple times.
+            List<Task<rmq::QueryRouteResponse>> tasks = new List<Task<rmq.QueryRouteResponse>>();
+            for (int i = 0; i < 16; i++)
+            {
+                tasks.Add(rpcClient.QueryRoute(metadata, request, clientConfig.getIoTimeout()));
+            }
+
+            // Verify
+            var result = Task.WhenAll(tasks).GetAwaiter().GetResult();
+            foreach (var item in result)
+            {
+                Assert.AreEqual(0, item.Common.Status.Code);
+            }
         }
 
 
@@ -85,6 +96,7 @@ namespace Org.Apache.Rocketmq
             Signature.sign(clientConfig, metadata);
             
             var response = rpcClient.Heartbeat(metadata, request, TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
+            Assert.AreEqual("ok", response.Common.Status.Message);
         }
 
         [TestMethod]
@@ -114,6 +126,202 @@ namespace Org.Apache.Rocketmq
             var response = rpcClient.SendMessage(metadata, request, TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
         }
 
+        [TestMethod]
+        public void testHealthCheck()
+        {
+            var request = new rmq::HealthCheckRequest();
+            request.Group = new rmq::Resource();
+            request.Group.ResourceNamespace = resourceNamespace;
+            request.Group.Name = group;
+            request.ClientHost = "test";
+            var metadata = new grpc::Metadata();
+            Signature.sign(clientConfig, metadata);
+            var response = rpcClient.HealthCheck(metadata, request, TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
+            Assert.AreEqual("ok", response.Common.Status.Message);
+        }
+
+        [TestMethod]
+        public void HeartbeatAsConsumer()
+        {
+            var request = new rmq::HeartbeatRequest();
+            request.ClientId = clientId;
+            request.ConsumerData = new rmq::ConsumerData();
+            request.ConsumerData.Group = new rmq::Resource();
+            request.ConsumerData.Group.ResourceNamespace = resourceNamespace;
+            request.ConsumerData.Group.Name = group;
+
+            request.ConsumerData.ConsumeModel = rmq::ConsumeModel.Clustering;
+            request.ConsumerData.ConsumePolicy = rmq::ConsumePolicy.Resume;
+            request.ConsumerData.ConsumeType = rmq::ConsumeMessageType.Passive;
+
+            var subscription = new rmq::SubscriptionEntry();
+            subscription.Topic = new rmq::Resource();
+            subscription.Topic.ResourceNamespace = resourceNamespace;
+            subscription.Topic.Name = topic;
+            subscription.Expression = new rmq::FilterExpression();
+            subscription.Expression.Type = rmq::FilterType.Tag;
+            subscription.Expression.Expression = "*";
+            request.ConsumerData.Subscriptions.Add(subscription);
+
+            var metadata = new grpc::Metadata();
+            Signature.sign(clientConfig, metadata);
+
+            var response = rpcClient.Heartbeat(metadata, request, TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
+            Assert.AreEqual("ok", response.Common.Status.Message);
+        }
+
+        private rmq::QueryAssignmentResponse queryAssignments()
+        {
+            HeartbeatAsConsumer();
+            var request = new rmq::QueryAssignmentRequest();
+            request.Endpoints = new rmq::Endpoints();
+            request.Endpoints.Scheme = rmq::AddressScheme.Ipv4;
+            var address = new rmq::Address();
+            address.Host = host;
+            address.Port = port;
+            request.Endpoints.Addresses.Add(address);
+
+            request.Group = new rmq::Resource();
+            request.Group.ResourceNamespace = resourceNamespace;
+            request.Group.Name = group;
+
+            request.ClientId = clientId;
+            request.Topic = new rmq::Resource();
+            request.Topic.ResourceNamespace = resourceNamespace;
+            request.Topic.Name = topic;
+
+            var metadata = new grpc::Metadata();
+            Signature.sign(clientConfig, metadata);
+
+            var response = rpcClient.QueryAssignment(metadata, request, System.TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
+            return response;
+        }
+
+        [TestMethod]
+        public void testQueryAssignment()
+        {
+            var response = queryAssignments();
+
+            Assert.AreEqual("ok", response.Common.Status.Message);
+            Assert.IsTrue(response.Assignments.Count > 0);
+        }
+
+        private rmq::ReceiveMessageResponse DoReceiveMessage()
+        {
+            var assignmentsResponse = queryAssignments();
+            Assert.IsTrue(assignmentsResponse.Assignments.Count > 0);
+            var assignment = assignmentsResponse.Assignments[0];
+
+            // Send some prior messages 
+            for (int i = 0; i < batchSize; i++)
+            {
+                testSendMessage();
+            }
+
+            var request = new rmq::ReceiveMessageRequest();
+            request.Group = new rmq::Resource();
+            request.Group.ResourceNamespace = resourceNamespace;
+            request.Group.Name = group;
+
+            request.ClientId = clientId;
+            request.Partition = assignment.Partition;
+
+            request.FilterExpression = new rmq::FilterExpression();
+            request.FilterExpression.Type = rmq::FilterType.Tag;
+            request.FilterExpression.Expression = "*";
+
+            request.ConsumePolicy = rmq::ConsumePolicy.Resume;
+            request.BatchSize = batchSize;
+
+            request.InvisibleDuration = new Google.Protobuf.WellKnownTypes.Duration();
+            request.InvisibleDuration.Seconds = 10;
+            request.InvisibleDuration.Nanos = 0;
+
+            request.AwaitTime = new Google.Protobuf.WellKnownTypes.Duration();
+            request.AwaitTime.Seconds = 10;
+            request.AwaitTime.Nanos = 0;
+
+            var metadata = new grpc::Metadata();
+            Signature.sign(clientConfig, metadata);
+            var response = rpcClient.ReceiveMessage(metadata, request, TimeSpan.FromSeconds(15)).GetAwaiter().GetResult();
+            return response;
+        }
+
+        [TestMethod]
+        public void testReceiveMessage()
+        {
+            var response = DoReceiveMessage();
+            Assert.AreEqual(0, response.Common.Status.Code);
+            Assert.IsTrue(response.Messages.Count > 0);
+        }
+
+        [TestMethod]
+        public void testAck()
+        {
+            var receiveMessageResponse = DoReceiveMessage();
+
+            List<Task<rmq::AckMessageResponse>> tasks = new List<Task<rmq.AckMessageResponse>>();
+
+            foreach (var message in receiveMessageResponse.Messages)
+            {
+                var request = new rmq::AckMessageRequest();
+                request.Topic = new rmq::Resource();
+                request.Topic.ResourceNamespace = resourceNamespace;
+                request.Topic.Name = topic;
+
+                request.Group = new rmq::Resource();
+                request.Group.ResourceNamespace = resourceNamespace;
+                request.Group.Name = group;
+
+                request.ClientId = clientId;
+
+                request.ReceiptHandle = message.SystemAttribute.ReceiptHandle;
+                request.MessageId = message.SystemAttribute.MessageId;
+                var metadata = new grpc::Metadata();
+                Signature.sign(clientConfig, metadata);
+                tasks.Add(rpcClient.AckMessage(metadata, request, TimeSpan.FromSeconds(3)));
+            }
+            var result = Task.WhenAll(tasks).GetAwaiter().GetResult();
+            foreach (var item in result)
+            {
+                Assert.AreEqual("ok", item.Common.Status.Message);
+            }
+        }
+
+        [TestMethod]
+        public void testNack()
+        {
+            var receiveMessageResponse = DoReceiveMessage();
+            List<Task<rmq::NackMessageResponse>> tasks = new List<Task<rmq.NackMessageResponse>>();
+            foreach (var message in receiveMessageResponse.Messages)
+            {
+                var request = new rmq::NackMessageRequest();
+                request.Topic = new rmq::Resource();
+                request.Topic.ResourceNamespace = resourceNamespace;
+                request.Topic.Name = topic;
+
+                request.Group = new rmq::Resource();
+                request.Group.ResourceNamespace = resourceNamespace;
+                request.Group.Name = group;
+
+                request.ClientId = clientId;
+
+                request.ReceiptHandle = message.SystemAttribute.ReceiptHandle;
+                request.MessageId = message.SystemAttribute.MessageId;
+                request.DeliveryAttempt = 1;
+                request.MaxDeliveryAttempts = 16;
+
+                var metadata = new grpc::Metadata();
+                Signature.sign(clientConfig, metadata);
+                tasks.Add(rpcClient.NackMessage(metadata, request, TimeSpan.FromSeconds(3)));
+            }
+            var result = Task.WhenAll(tasks).GetAwaiter().GetResult();
+            foreach (var item in result)
+            {
+                Assert.AreEqual(0, item.Common.Status.Code);
+            }
+        }
+
         // Remove the Ignore annotation if server has fixed
         [Ignore]
         [TestMethod]
@@ -141,7 +349,10 @@ namespace Org.Apache.Rocketmq
         private static string host = "116.62.231.199";
         private static int port = 80;
 
+        private static int batchSize = 32;
+
         private static IRpcClient rpcClient;
+
         private static ClientConfig clientConfig;
     }
 }

@@ -20,7 +20,7 @@ using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
-using Apache.Rocketmq.V1;
+using rmq = Apache.Rocketmq.V1;
 using grpc = global::Grpc.Core;
 using NLog;
 
@@ -29,7 +29,7 @@ namespace Org.Apache.Rocketmq
 {
     public abstract class Client : ClientConfig, IClient
     {
-        private static readonly Logger Logger = MqLogManager.Instance.GetCurrentClassLogger();
+        protected static readonly Logger Logger = MqLogManager.Instance.GetCurrentClassLogger();
 
         public Client(INameServerResolver resolver, string resourceNamespace)
         {
@@ -40,6 +40,8 @@ namespace Org.Apache.Rocketmq
 
             _topicRouteTable = new ConcurrentDictionary<string, TopicRouteData>();
             _updateTopicRouteCts = new CancellationTokenSource();
+
+            _healthCheckCts = new CancellationTokenSource();
         }
 
         public virtual void Start()
@@ -55,14 +57,55 @@ namespace Org.Apache.Rocketmq
 
             }, 30, _updateTopicRouteCts.Token);
 
+            schedule(async () =>
+            {
+                await HealthCheck();
+            }, 30, _healthCheckCts.Token);
+
         }
 
-        public virtual async Task Shutdown()
+        public virtual void Shutdown()
         {
             Logger.Info($"Shutdown client[resource-namespace={_resourceNamespace}");
             _updateTopicRouteCts.Cancel();
             _nameServerResolverCts.Cancel();
-            await Manager.Shutdown();
+            Manager.Shutdown().GetAwaiter().GetResult();
+        }
+
+        protected string FilterBroker(Func<string, bool> acceptor)
+        {
+            foreach (var item in _topicRouteTable)
+            {
+                foreach (var partition in item.Value.Partitions)
+                {
+                    string target = partition.Broker.targetUrl();
+                    if (acceptor(target))
+                    {
+                        return target;
+                    }
+                }
+            }
+            return null;
+        }
+
+        /**
+         * Return all endpoints of brokers in route table.
+         */
+        private List<string> AvailableBrokerEndpoints()
+        {
+            List<string> endpoints = new List<string>();
+            foreach (var item in _topicRouteTable)
+            {
+                foreach (var partition in item.Value.Partitions)
+                {
+                    string endpoint = partition.Broker.targetUrl();
+                    if (!endpoints.Contains(endpoint))
+                    {
+                        endpoints.Add(endpoint);
+                    }
+                }
+            }
+            return endpoints;
         }
 
         private async Task UpdateNameServerList()
@@ -153,6 +196,18 @@ namespace Org.Apache.Rocketmq
             });
         }
 
+        protected rmq::Endpoints AccessEndpoint(string nameServer)
+        {
+            var endpoints = new rmq::Endpoints();
+            endpoints.Scheme = global::Apache.Rocketmq.V1.AddressScheme.Ipv4;
+            var address = new global::Apache.Rocketmq.V1.Address();
+            int pos = nameServer.LastIndexOf(':');
+            address.Host = nameServer.Substring(0, pos);
+            address.Port = Int32.Parse(nameServer.Substring(pos + 1));
+            endpoints.Addresses.Add(address);
+            return endpoints;
+        }
+
         /**
          * Parameters:
          * topic
@@ -187,59 +242,198 @@ namespace Org.Apache.Rocketmq
                 // We got one or more name servers available.
                 int index = (_currentNameServerIndex + retry) % _nameServers.Count;
                 string nameServer = _nameServers[index];
-                var request = new QueryRouteRequest();
-                request.Topic = new Resource();
+                var request = new rmq::QueryRouteRequest();
+                request.Topic = new rmq::Resource();
                 request.Topic.ResourceNamespace = _resourceNamespace;
                 request.Topic.Name = topic;
-                request.Endpoints = new Endpoints();
-                request.Endpoints.Scheme = global::Apache.Rocketmq.V1.AddressScheme.Ipv4;
-                var address = new global::Apache.Rocketmq.V1.Address();
-                int pos = nameServer.LastIndexOf(':');
-                address.Host = nameServer.Substring(0, pos);
-                address.Port = Int32.Parse(nameServer.Substring(pos + 1));
-                request.Endpoints.Addresses.Add(address);
-                var target = string.Format("https://{0}:{1}", address.Host, address.Port);
+                request.Endpoints = AccessEndpoint(nameServer);
                 var metadata = new grpc.Metadata();
                 Signature.sign(this, metadata);
-                var topicRouteData = await Manager.ResolveRoute(target, metadata, request, getIoTimeout());
-                if (null != topicRouteData)
+                string target = $"https://{nameServer}";
+                TopicRouteData topicRouteData;
+                try
                 {
-                    if (retry > 0)
+                    topicRouteData = await Manager.ResolveRoute(target, metadata, request, getIoTimeout());
+                    if (null != topicRouteData)
                     {
-                        _currentNameServerIndex = index;
+                        Logger.Debug($"Got route entries for {topic} from name server");
+                        _topicRouteTable.TryAdd(topic, topicRouteData);
+
+                        if (retry > 0)
+                        {
+                            _currentNameServerIndex = index;
+                        }
+                        return topicRouteData;
                     }
-                    return topicRouteData;
+                    else
+                    {
+                        Logger.Warn($"Failed to query route of {topic} from {target}");
+                    }
+                }
+                catch (System.Exception e)
+                {
+                    Logger.Warn(e, "Failed when querying route");
                 }
             }
             return null;
         }
 
-        public abstract void PrepareHeartbeatData(HeartbeatRequest request);
+        public abstract void PrepareHeartbeatData(rmq::HeartbeatRequest request);
 
-        public void Heartbeat()
+        public async Task Heartbeat()
         {
-            List<string> endpoints = endpointsInUse();
+            List<string> endpoints = AvailableBrokerEndpoints();
             if (0 == endpoints.Count)
             {
+                Logger.Debug("No broker endpoints available in topic route");
                 return;
             }
 
-            var heartbeatRequest = new HeartbeatRequest();
-            PrepareHeartbeatData(heartbeatRequest);
+            var request = new rmq::HeartbeatRequest();
+            PrepareHeartbeatData(request);
 
             var metadata = new grpc::Metadata();
             Signature.sign(this, metadata);
+
+            List<Task> tasks = new List<Task>();
+            foreach (var endpoint in endpoints)
+            {
+                tasks.Add(Manager.Heartbeat(endpoint, metadata, request, getIoTimeout()));
+            }
+
+            await Task.WhenAll(tasks);
         }
 
-        public void HealthCheck()
+        private List<string> BlockedBrokerEndpoints()
+        {
+            List<string> endpoints = new List<string>();
+            return endpoints;
+        }
+
+        public async Task HealthCheck()
+        {
+            var request = new rmq::HealthCheckRequest();
+
+            var metadata = new grpc::Metadata();
+            Signature.sign(this, metadata);
+            List<Task<Boolean>> tasks = new List<Task<Boolean>>();
+            List<string> endpoints = BlockedBrokerEndpoints();
+            foreach (var endpoint in endpoints)
+            {
+                tasks.Add(Manager.HealthCheck(endpoint, metadata, request, getIoTimeout()));
+            }
+            var result = await Task.WhenAll(tasks);
+            int i = 0;
+            foreach (var ok in result)
+            {
+                if (ok)
+                {
+                    RemoveFromBlockList(endpoints[i]);
+                }
+                ++i;
+            }
+        }
+
+        private void RemoveFromBlockList(string endpoint)
         {
 
+        }
+
+        public async Task<List<rmq::Assignment>> scanLoadAssignment(string topic, string group)
+        {
+            // Pick a broker randomly
+            string target = FilterBroker((s) => true);
+            var request = new rmq::QueryAssignmentRequest();
+            request.ClientId = clientId();
+            request.Topic = new rmq::Resource();
+            request.Topic.ResourceNamespace = _resourceNamespace;
+            request.Topic.Name = topic;
+            request.Group = new rmq::Resource();
+            request.Group.ResourceNamespace = _resourceNamespace;
+            request.Group.Name = group;
+            request.Endpoints = AccessEndpoint(_nameServers[_currentNameServerIndex]);
+            try
+            {
+                var metadata = new grpc::Metadata();
+                Signature.sign(this, metadata);
+                return await Manager.QueryLoadAssignment(target, metadata, request, getIoTimeout());
+            }
+            catch (System.Exception e)
+            {
+                Logger.Warn(e, $"Failed to acquire load assignments from {target}");
+            }
+            // Just return an empty list.
+            return new List<rmq.Assignment>();
+        }
+
+        private string TargetUrl(rmq::Assignment assignment)
+        {
+            var broker = assignment.Partition.Broker;
+            var addresses = broker.Endpoints.Addresses;
+            // TODO: use the first address for now. 
+            var address = addresses[0];
+            return $"https://{address.Host}:{address.Port}";
+        }
+
+
+        public async Task<List<Message>> ReceiveMessage(rmq::Assignment assignment, string group)
+        {
+            var targetUrl = TargetUrl(assignment);
+            var metadata = new grpc::Metadata();
+            Signature.sign(this, metadata);
+            var request = new rmq::ReceiveMessageRequest();
+            request.Group = new rmq::Resource();
+            request.Group.ResourceNamespace = _resourceNamespace;
+            request.Group.Name = group;
+            request.Partition = assignment.Partition;
+            var messages = await Manager.ReceiveMessage(targetUrl, metadata, request, getLongPollingTimeout());
+            return messages;
+        }
+
+        public async Task<Boolean> Ack(string target, string group, string topic, string receiptHandle, String messageId)
+        {
+            var request = new rmq::AckMessageRequest();
+            request.ClientId = clientId();
+            request.ReceiptHandle = receiptHandle;
+            request.Group = new rmq::Resource();
+            request.Group.ResourceNamespace = _resourceNamespace;
+            request.Group.Name = group;
+
+            request.Topic = new rmq::Resource();
+            request.Topic.ResourceNamespace = _resourceNamespace;
+            request.Topic.Name = topic;
+
+            request.MessageId = messageId;
+
+            var metadata = new grpc::Metadata();
+            Signature.sign(this, metadata);
+            return await Manager.Ack(target, metadata, request, getIoTimeout());
+        }
+
+        public async Task<Boolean> Nack(string target, string group, string topic, string receiptHandle, String messageId)
+        {
+            var request = new rmq::NackMessageRequest();
+            request.ClientId = clientId();
+            request.ReceiptHandle = receiptHandle;
+            request.Group = new rmq::Resource();
+            request.Group.ResourceNamespace = _resourceNamespace;
+            request.Group.Name = group;
+
+            request.Topic = new rmq::Resource();
+            request.Topic.ResourceNamespace = _resourceNamespace;
+            request.Topic.Name = topic;
+
+            request.MessageId = messageId;
+
+            var metadata = new grpc::Metadata();
+            Signature.sign(this, metadata);
+            return await Manager.Nack(target, metadata, request, getIoTimeout());
         }
 
         public async Task<bool> NotifyClientTermination()
         {
-            List<string> endpoints = endpointsInUse();
-            var request = new NotifyClientTerminationRequest();
+            List<string> endpoints = AvailableBrokerEndpoints();
+            var request = new rmq::NotifyClientTerminationRequest();
             request.ClientId = clientId();
 
             var metadata = new grpc.Metadata();
@@ -263,12 +457,6 @@ namespace Org.Apache.Rocketmq
             return true;
         }
 
-        private List<string> endpointsInUse()
-        {
-            //TODO: gather endpoints from route entries.
-            return new List<string>();
-        }
-
         protected readonly IClientManager Manager;
         
         private readonly INameServerResolver _nameServerResolver;
@@ -278,6 +466,8 @@ namespace Org.Apache.Rocketmq
 
         private readonly ConcurrentDictionary<string, TopicRouteData> _topicRouteTable;
         private readonly CancellationTokenSource _updateTopicRouteCts;
+
+        private readonly CancellationTokenSource _healthCheckCts;
 
         protected const int MaxTransparentRetry = 3;
     }

@@ -18,7 +18,10 @@
 using Apache.Rocketmq.V1;
 using System.Threading.Tasks;
 using System;
+using System.Collections.Generic;
 using grpc = global::Grpc.Core;
+using rmq = Apache.Rocketmq.V1;
+
 
 namespace Org.Apache.Rocketmq {
     public interface IClientManager {
@@ -26,11 +29,22 @@ namespace Org.Apache.Rocketmq {
 
         Task<TopicRouteData> ResolveRoute(string target, grpc::Metadata metadata, QueryRouteRequest request, TimeSpan timeout);
 
-        Task<Boolean> Heartbeat(string target, grpc::Metadata metadata, HeartbeatRequest request, TimeSpan timeout);
+        Task<Boolean> Heartbeat(string target, grpc::Metadata metadata, rmq::HeartbeatRequest request, TimeSpan timeout);
+
+        Task<Boolean> HealthCheck(string target, grpc::Metadata metadata, rmq::HealthCheckRequest request, TimeSpan timeout);
 
         Task<Boolean> NotifyClientTermination(string target, grpc::Metadata metadata, NotifyClientTerminationRequest request, TimeSpan timeout);
 
         Task<SendMessageResponse> SendMessage(string target, grpc::Metadata metadata, SendMessageRequest request, TimeSpan timeout);
+
+        Task<List<Assignment>> QueryLoadAssignment(string target, grpc::Metadata metadata, QueryAssignmentRequest request, TimeSpan timeout);
+
+        Task<List<Message>> ReceiveMessage(string target, grpc::Metadata metadata, ReceiveMessageRequest request, TimeSpan timeout);
+
+
+        Task<Boolean> Ack(string target, grpc::Metadata metadata, AckMessageRequest request, TimeSpan timeout);
+
+        Task<Boolean> Nack(string target, grpc::Metadata metadata, NackMessageRequest request, TimeSpan timeout);
 
         Task Shutdown();
     }

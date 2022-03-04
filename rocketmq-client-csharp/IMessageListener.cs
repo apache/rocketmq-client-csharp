@@ -15,19 +15,16 @@
  * limitations under the License.
  */
 
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using System;
 
 namespace Org.Apache.Rocketmq
 {
-    public interface IClient : IClientConfig
+
+    public interface IMessageListener
     {
-
-        Task Heartbeat();
-
-        Task HealthCheck();
-
-        Task<bool> NotifyClientTermination();
+        Task Consume(List<Message> messages, List<Message> failed);
 
     }
+
 }

@@ -14,20 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-using System.Threading.Tasks;
-using System;
-
 namespace Org.Apache.Rocketmq
 {
-    public interface IClient : IClientConfig
+    public class FilterExpression
     {
 
-        Task Heartbeat();
+        public FilterExpression(string expression, ExpressionType type)
+        {
+            _expression = expression;
+            _type = type;
+        }
 
-        Task HealthCheck();
+        private ExpressionType _type;
 
-        Task<bool> NotifyClientTermination();
+        private string _expression;
+
+        public ExpressionType Type
+        {
+            get { return _type; }
+        }
+
+        public string Expression
+        {
+            get { return _expression; }
+        }
 
     }
 }

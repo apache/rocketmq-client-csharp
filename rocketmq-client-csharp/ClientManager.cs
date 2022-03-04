@@ -17,15 +17,21 @@
 
 using rmq = Apache.Rocketmq.V1;
 using System;
+using System.IO;
+using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 using grpc = Grpc.Core;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using NLog;
 
 namespace Org.Apache.Rocketmq
 {
     public class ClientManager : IClientManager
     {
+        private static readonly Logger Logger = MqLogManager.Instance.GetCurrentClassLogger();
+
         public ClientManager()
         {
             _rpcClients = new Dictionary<string, RpcClient>();
@@ -150,12 +156,23 @@ namespace Org.Apache.Rocketmq
         {
             var rpcClient = GetRpcClient(target);
             var response = await rpcClient.Heartbeat(metadata, request, timeout);
-            if (null == response)
+            Logger.Debug($"Heartbeat to {target} response status: {response.Common.Status.ToString()}");
+            return response.Common.Status.Code == (int)Google.Rpc.Code.Ok;
+        }
+
+        public async Task<Boolean> HealthCheck(string target, grpc::Metadata metadata, rmq::HealthCheckRequest request, TimeSpan timeout)
+        {
+            var rpcClient = GetRpcClient(target);
+            try
             {
+                var response = await rpcClient.HealthCheck(metadata, request, timeout);
+                return response.Common.Status.Code == (int)Google.Rpc.Code.Ok;
+            }
+            catch (System.Exception e)
+            {
+                Logger.Debug(e, $"Health-check to {target} failed");
                 return false;
             }
-
-            return response.Common.Status.Code == (int)Google.Rpc.Code.Ok;
         }
 
         public async Task<rmq::SendMessageResponse> SendMessage(string target, grpc::Metadata metadata,
@@ -172,6 +189,121 @@ namespace Org.Apache.Rocketmq
             var rpcClient = GetRpcClient(target);
             rmq::NotifyClientTerminationResponse response =
                 await rpcClient.NotifyClientTermination(metadata, request, timeout);
+            return response.Common.Status.Code == ((int)Google.Rpc.Code.Ok);
+        }
+
+        public async Task<List<rmq::Assignment>> QueryLoadAssignment(string target, grpc::Metadata metadata, rmq::QueryAssignmentRequest request, TimeSpan timeout)
+        {
+            var rpcClient = GetRpcClient(target);
+            rmq::QueryAssignmentResponse response = await rpcClient.QueryAssignment(metadata, request, timeout);
+            if (response.Common.Status.Code != (int)Google.Rpc.Code.Ok)
+            {
+                // TODO: Build exception hierarchy
+                throw new Exception($"Failed to query load assignment from server. Cause: {response.Common.Status.Message}");
+            }
+
+            List<rmq::Assignment> assignments = new List<rmq.Assignment>();
+            foreach (var item in response.Assignments)
+            {
+                assignments.Add(item);
+            }
+            return assignments;
+        }
+
+        public async Task<List<Message>> ReceiveMessage(string target, grpc::Metadata metadata, rmq::ReceiveMessageRequest request, TimeSpan timeout)
+        {
+            var rpcClient = GetRpcClient(target);
+            rmq::ReceiveMessageResponse response = await rpcClient.ReceiveMessage(metadata, request, timeout);
+            if (response.Common.Status.Code != (int)Google.Rpc.Code.Ok)
+            {
+                throw new Exception($"Failed to receive messages from {target}, cause: {response.Common.Status.Message}");
+            }
+
+            List<Message> messages = new List<Message>();
+            foreach (var message in response.Messages)
+            {
+                messages.Add(convert(target, message));
+            }
+            return messages;
+        }
+
+        private Message convert(string sourceHost, rmq::Message message)
+        {
+            var msg = new Message();
+            msg.Topic = message.Topic.Name;
+            msg.messageId = message.SystemAttribute.MessageId;
+            msg.Tag = message.SystemAttribute.Tag;
+
+            // Validate message body checksum
+            byte[] raw = message.Body.ToByteArray();
+            if (rmq::DigestType.Crc32 == message.SystemAttribute.BodyDigest.Type)
+            {
+                uint checksum = Force.Crc32.Crc32Algorithm.Compute(raw, 0, raw.Length);
+                if (!message.SystemAttribute.BodyDigest.Checksum.Equals(checksum.ToString("X")))
+                {
+                    msg._bodyChecksumVerified = false;
+                }
+            }
+            else if (rmq::DigestType.Md5 == message.SystemAttribute.BodyDigest.Type)
+            {
+                var checksum = MD5.HashData(raw);
+                if (!message.SystemAttribute.BodyDigest.Checksum.Equals(Convert.ToHexString(checksum)))
+                {
+                    msg._bodyChecksumVerified = false;
+                }
+            }
+            else if (rmq::DigestType.Sha1 == message.SystemAttribute.BodyDigest.Type)
+            {
+                var checksum = SHA1.HashData(raw);
+                if (!message.SystemAttribute.BodyDigest.Checksum.Equals(Convert.ToHexString(checksum)))
+                {
+                    msg._bodyChecksumVerified = false;
+                }
+            }
+
+            foreach (var entry in message.UserAttribute)
+            {
+                msg.UserProperties.Add(entry.Key, entry.Value);
+            }
+
+            msg._receiptHandle = message.SystemAttribute.ReceiptHandle;
+            msg._sourceHost = sourceHost;
+
+            foreach (var key in message.SystemAttribute.Keys)
+            {
+                msg.Keys.Add(key);
+            }
+
+            msg._deliveryAttempt = message.SystemAttribute.DeliveryAttempt;
+
+            if (message.SystemAttribute.BodyEncoding == rmq::Encoding.Gzip)
+            {
+                // Decompress/Inflate message body
+                var inputStream = new MemoryStream(message.Body.ToByteArray());
+                var gzipStream = new GZipStream(inputStream, CompressionMode.Decompress);
+                var outputStream = new MemoryStream();
+                gzipStream.CopyTo(outputStream);
+                msg.Body = outputStream.ToArray();
+            }
+            else
+            {
+                msg.Body = message.Body.ToByteArray();
+            }
+
+            return msg;
+        }
+
+        public async Task<Boolean> Ack(string target, grpc::Metadata metadata, rmq::AckMessageRequest request, TimeSpan timeout)
+        {
+            var rpcClient = GetRpcClient(target);
+            var response = await rpcClient.AckMessage(metadata, request, timeout);
+            return response.Common.Status.Code == ((int)Google.Rpc.Code.Ok);
+        }
+
+        public async Task<Boolean> Nack(string target, grpc::Metadata metadata, rmq::NackMessageRequest request, TimeSpan timeout)
+        {
+            var rpcClient = GetRpcClient(target);
+            var response = await rpcClient.NackMessage(metadata, request, timeout);
             return response.Common.Status.Code == ((int)Google.Rpc.Code.Ok);
         }
 

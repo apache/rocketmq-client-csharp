@@ -14,20 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-using System.Threading.Tasks;
-using System;
-
 namespace Org.Apache.Rocketmq
 {
-    public interface IClient : IClientConfig
+
+    public enum ExpressionType
     {
-
-        Task Heartbeat();
-
-        Task HealthCheck();
-
-        Task<bool> NotifyClientTermination();
-
+        TAG,
+        SQL92,
     }
+
 }
