@@ -80,7 +80,7 @@ namespace Org.Apache.Rocketmq
         }
 
 
-        [Ignore]
+        // [Ignore]
         [TestMethod]
         public void testConsumeMessage()
         {

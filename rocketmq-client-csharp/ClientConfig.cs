@@ -25,7 +25,7 @@ namespace Org.Apache.Rocketmq {
             var pid = System.Diagnostics.Process.GetCurrentProcess().Id;
             this.clientId_ = string.Format("{0}@{1}#{2}", hostName, pid, instanceName_);
             this._ioTimeout = TimeSpan.FromSeconds(3);
-            this.longPollingIoTimeout_ = TimeSpan.FromSeconds(15);
+            this.longPollingIoTimeout_ = TimeSpan.FromSeconds(30);
         }
 
         public string region() {

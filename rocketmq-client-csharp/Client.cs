@@ -386,7 +386,7 @@ namespace Org.Apache.Rocketmq
             request.Group.ResourceNamespace = _resourceNamespace;
             request.Group.Name = group;
             request.Partition = assignment.Partition;
-            var messages = await Manager.ReceiveMessage(targetUrl, metadata, request, getIoTimeout());
+            var messages = await Manager.ReceiveMessage(targetUrl, metadata, request, getLongPollingTimeout());
             return messages;
         }
 
