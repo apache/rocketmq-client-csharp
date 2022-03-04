@@ -15,9 +15,6 @@
  * limitations under the License.
  */
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Grpc.Core.Interceptors;
-using System.Net.Http;
-using Grpc.Net.Client;
 using rmq = global::Apache.Rocketmq.V1;
 using grpc = global::Grpc.Core;
 using System;
