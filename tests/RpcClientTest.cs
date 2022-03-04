@@ -282,8 +282,35 @@ namespace Org.Apache.Rocketmq
         [TestMethod]
         public void testNack()
         {
+            var receiveMessageResponse = DoReceiveMessage();
+            List<Task<rmq::NackMessageResponse>> tasks = new List<Task<rmq.NackMessageResponse>>();
+            foreach (var message in receiveMessageResponse.Messages)
+            {
+                var request = new rmq::NackMessageRequest();
+                request.Topic = new rmq::Resource();
+                request.Topic.ResourceNamespace = resourceNamespace;
+                request.Topic.Name = topic;
 
+                request.Group = new rmq::Resource();
+                request.Group.ResourceNamespace = resourceNamespace;
+                request.Group.Name = group;
 
+                request.ClientId = clientId;
+
+                request.ReceiptHandle = message.SystemAttribute.ReceiptHandle;
+                request.MessageId = message.SystemAttribute.MessageId;
+                request.DeliveryAttempt = 1;
+                request.MaxDeliveryAttempts = 16;
+
+                var metadata = new grpc::Metadata();
+                Signature.sign(clientConfig, metadata);
+                tasks.Add(rpcClient.NackMessage(metadata, request, TimeSpan.FromSeconds(3)));
+            }
+            var result = Task.WhenAll(tasks).GetAwaiter().GetResult();
+            foreach (var item in result)
+            {
+                Assert.AreEqual(0, item.Common.Status.Code);
+            }
         }
 
         // Remove the Ignore annotation if server has fixed
