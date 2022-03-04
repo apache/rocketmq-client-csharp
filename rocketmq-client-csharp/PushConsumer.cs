@@ -23,10 +23,8 @@ using System.Threading.Tasks;
 
 namespace Org.Apache.Rocketmq
 {
-
     public class PushConsumer : Client, IConsumer
     {
-
         public PushConsumer(INameServerResolver resolver, string resourceNamespace, string group) : base(resolver, resourceNamespace)
         {
             _group = group;
@@ -80,6 +78,7 @@ namespace Org.Apache.Rocketmq
 
         private async Task scanLoadAssignments()
         {
+            Logger.Debug("Start to scan load assignments from server");
             List<Task<List<Assignment>>> tasks = new List<Task<List<Assignment>>>();
             foreach (var item in _topicFilterExpressionMap)
             {
@@ -96,6 +95,7 @@ namespace Org.Apache.Rocketmq
 
                 checkAndUpdateAssignments(assignments);
             }
+            Logger.Debug("Completed scanning load assignments");
         }
 
         private void ScanExpiredProcessQueue()
@@ -139,6 +139,7 @@ namespace Org.Apache.Rocketmq
                 {
                     if (!assignments.Contains(assignment))
                     {
+                        Logger.Info($"Stop receiving messages from {assignment.Partition.ToString()}");
                         CancelPop(assignment);
                     }
                 }
@@ -160,6 +161,7 @@ namespace Org.Apache.Rocketmq
 
         private async Task ExecutePop0(Assignment assignment)
         {
+            Logger.Info($"Start to pop {assignment.Partition.ToString()}");
             while (true)
             {
                 try

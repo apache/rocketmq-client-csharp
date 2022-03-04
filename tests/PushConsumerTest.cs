@@ -26,6 +26,10 @@ namespace Org.Apache.Rocketmq
     {
         public async Task Consume(List<Message> messages, List<Message> failed)
         {
+            foreach (var message in messages)
+            {
+                Console.WriteLine("");
+            }
         }
 
     }
@@ -80,16 +84,13 @@ namespace Org.Apache.Rocketmq
         [TestMethod]
         public void testConsumeMessage()
         {
-
             var consumer = new PushConsumer(resolver, resourceNamespace, group);
             consumer.CredentialsProvider = new ConfigFileCredentialsProvider();
             consumer.Region = "cn-hangzhou-pre";
             consumer.Subscribe(topic, "*", ExpressionType.TAG);
             consumer.RegisterListener(new CountableMessageListener());
             consumer.Start();
-
-            System.Threading.Thread.Sleep(System.TimeSpan.FromSeconds(3));
-
+            System.Threading.Thread.Sleep(System.TimeSpan.FromSeconds(300));
             consumer.Shutdown();
         }
 

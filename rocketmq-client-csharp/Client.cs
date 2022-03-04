@@ -29,7 +29,7 @@ namespace Org.Apache.Rocketmq
 {
     public abstract class Client : ClientConfig, IClient
     {
-        private static readonly Logger Logger = MqLogManager.Instance.GetCurrentClassLogger();
+        protected static readonly Logger Logger = MqLogManager.Instance.GetCurrentClassLogger();
 
         public Client(INameServerResolver resolver, string resourceNamespace)
         {

@@ -64,8 +64,20 @@ namespace Org.Apache.Rocketmq
 
             var metadata = new grpc::Metadata();
             Signature.sign(clientConfig, metadata);
-            
-            var response = rpcClient.QueryRoute(metadata, request, TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
+
+            // Execute route query multiple times.
+            List<Task<rmq::QueryRouteResponse>> tasks = new List<Task<rmq.QueryRouteResponse>>();
+            for (int i = 0; i < 16; i++)
+            {
+                tasks.Add(rpcClient.QueryRoute(metadata, request, clientConfig.getIoTimeout()));
+            }
+
+            // Verify
+            var result = Task.WhenAll(tasks).GetAwaiter().GetResult();
+            foreach (var item in result)
+            {
+                Assert.AreEqual(0, item.Common.Status.Code);
+            }
         }
 
 
