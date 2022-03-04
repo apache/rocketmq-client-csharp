@@ -22,6 +22,8 @@ using rmq = global::Apache.Rocketmq.V1;
 using grpc = global::Grpc.Core;
 using System;
 using pb = global::Google.Protobuf;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Org.Apache.Rocketmq
 {
@@ -195,24 +197,92 @@ namespace Org.Apache.Rocketmq
             Assert.IsTrue(response.Assignments.Count > 0);
         }
 
-        [TestMethod]
-        public void testReceiveMessage()
+        private rmq::ReceiveMessageResponse DoReceiveMessage()
         {
             var assignmentsResponse = queryAssignments();
             Assert.IsTrue(assignmentsResponse.Assignments.Count > 0);
             var assignment = assignmentsResponse.Assignments[0];
 
+            // Send some prior messages 
+            for (int i = 0; i < batchSize; i++)
+            {
+                testSendMessage();
+            }
+
+            var request = new rmq::ReceiveMessageRequest();
+            request.Group = new rmq::Resource();
+            request.Group.ResourceNamespace = resourceNamespace;
+            request.Group.Name = group;
+
+            request.ClientId = clientId;
+            request.Partition = assignment.Partition;
+
+            request.FilterExpression = new rmq::FilterExpression();
+            request.FilterExpression.Type = rmq::FilterType.Tag;
+            request.FilterExpression.Expression = "*";
+
+            request.ConsumePolicy = rmq::ConsumePolicy.Resume;
+            request.BatchSize = batchSize;
+
+            request.InvisibleDuration = new Google.Protobuf.WellKnownTypes.Duration();
+            request.InvisibleDuration.Seconds = 10;
+            request.InvisibleDuration.Nanos = 0;
+
+            request.AwaitTime = new Google.Protobuf.WellKnownTypes.Duration();
+            request.AwaitTime.Seconds = 10;
+            request.AwaitTime.Nanos = 0;
+
+            var metadata = new grpc::Metadata();
+            Signature.sign(clientConfig, metadata);
+            var response = rpcClient.ReceiveMessage(metadata, request, TimeSpan.FromSeconds(15)).GetAwaiter().GetResult();
+            return response;
+        }
+
+        [TestMethod]
+        public void testReceiveMessage()
+        {
+            var response = DoReceiveMessage();
+            Assert.AreEqual(0, response.Common.Status.Code);
+            Assert.IsTrue(response.Messages.Count > 0);
         }
 
         [TestMethod]
         public void testAck()
         {
+            var receiveMessageResponse = DoReceiveMessage();
 
+            List<Task<rmq::AckMessageResponse>> tasks = new List<Task<rmq.AckMessageResponse>>();
+
+            foreach (var message in receiveMessageResponse.Messages)
+            {
+                var request = new rmq::AckMessageRequest();
+                request.Topic = new rmq::Resource();
+                request.Topic.ResourceNamespace = resourceNamespace;
+                request.Topic.Name = topic;
+
+                request.Group = new rmq::Resource();
+                request.Group.ResourceNamespace = resourceNamespace;
+                request.Group.Name = group;
+
+                request.ClientId = clientId;
+
+                request.ReceiptHandle = message.SystemAttribute.ReceiptHandle;
+                request.MessageId = message.SystemAttribute.MessageId;
+                var metadata = new grpc::Metadata();
+                Signature.sign(clientConfig, metadata);
+                tasks.Add(rpcClient.AckMessage(metadata, request, TimeSpan.FromSeconds(3)));
+            }
+            var result = Task.WhenAll(tasks).GetAwaiter().GetResult();
+            foreach (var item in result)
+            {
+                Assert.AreEqual("ok", item.Common.Status.Message);
+            }
         }
 
         [TestMethod]
         public void testNack()
         {
+
 
         }
 
@@ -243,7 +313,10 @@ namespace Org.Apache.Rocketmq
         private static string host = "116.62.231.199";
         private static int port = 80;
 
+        private static int batchSize = 32;
+
         private static IRpcClient rpcClient;
+
         private static ClientConfig clientConfig;
     }
 }
