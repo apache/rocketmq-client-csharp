@@ -130,16 +130,77 @@ namespace Org.Apache.Rocketmq
         }
 
         [TestMethod]
+        public void HeartbeatAsConsumer()
+        {
+            var request = new rmq::HeartbeatRequest();
+            request.ClientId = clientId;
+            request.ConsumerData = new rmq::ConsumerData();
+            request.ConsumerData.Group = new rmq::Resource();
+            request.ConsumerData.Group.ResourceNamespace = resourceNamespace;
+            request.ConsumerData.Group.Name = group;
+
+            request.ConsumerData.ConsumeModel = rmq::ConsumeModel.Clustering;
+            request.ConsumerData.ConsumePolicy = rmq::ConsumePolicy.Resume;
+            request.ConsumerData.ConsumeType = rmq::ConsumeMessageType.Passive;
+
+            var subscription = new rmq::SubscriptionEntry();
+            subscription.Topic = new rmq::Resource();
+            subscription.Topic.ResourceNamespace = resourceNamespace;
+            subscription.Topic.Name = topic;
+            subscription.Expression = new rmq::FilterExpression();
+            subscription.Expression.Type = rmq::FilterType.Tag;
+            subscription.Expression.Expression = "*";
+            request.ConsumerData.Subscriptions.Add(subscription);
+
+            var metadata = new grpc::Metadata();
+            Signature.sign(clientConfig, metadata);
+
+            var response = rpcClient.Heartbeat(metadata, request, TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
+            Assert.AreEqual("ok", response.Common.Status.Message);
+        }
+
+        private rmq::QueryAssignmentResponse queryAssignments()
+        {
+            HeartbeatAsConsumer();
+            var request = new rmq::QueryAssignmentRequest();
+            request.Endpoints = new rmq::Endpoints();
+            request.Endpoints.Scheme = rmq::AddressScheme.Ipv4;
+            var address = new rmq::Address();
+            address.Host = host;
+            address.Port = port;
+            request.Endpoints.Addresses.Add(address);
+
+            request.Group = new rmq::Resource();
+            request.Group.ResourceNamespace = resourceNamespace;
+            request.Group.Name = group;
+
+            request.ClientId = clientId;
+            request.Topic = new rmq::Resource();
+            request.Topic.ResourceNamespace = resourceNamespace;
+            request.Topic.Name = topic;
+
+            var metadata = new grpc::Metadata();
+            Signature.sign(clientConfig, metadata);
+
+            var response = rpcClient.QueryAssignment(metadata, request, System.TimeSpan.FromSeconds(3)).GetAwaiter().GetResult();
+            return response;
+        }
+
+        [TestMethod]
         public void testQueryAssignment()
         {
-            testHeartbeat();
-            var request = new rmq::QueryAssignmentRequest();
+            var response = queryAssignments();
 
+            Assert.AreEqual("ok", response.Common.Status.Message);
+            Assert.IsTrue(response.Assignments.Count > 0);
         }
 
         [TestMethod]
         public void testReceiveMessage()
         {
+            var assignmentsResponse = queryAssignments();
+            Assert.IsTrue(assignmentsResponse.Assignments.Count > 0);
+            var assignment = assignmentsResponse.Assignments[0];
 
         }
 
