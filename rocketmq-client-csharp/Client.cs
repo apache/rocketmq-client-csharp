@@ -78,7 +78,7 @@ namespace Org.Apache.Rocketmq
             {
                 foreach (var partition in item.Value.Partitions)
                 {
-                    string target = partition.Broker.targetUrl();
+                    string target = partition.Broker.TargetUrl();
                     if (acceptor(target))
                     {
                         return target;
@@ -98,7 +98,7 @@ namespace Org.Apache.Rocketmq
             {
                 foreach (var partition in item.Value.Partitions)
                 {
-                    string endpoint = partition.Broker.targetUrl();
+                    string endpoint = partition.Broker.TargetUrl();
                     if (!endpoints.Contains(endpoint))
                     {
                         endpoints.Add(endpoint);

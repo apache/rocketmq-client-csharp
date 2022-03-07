@@ -100,7 +100,7 @@ namespace Org.Apache.Rocketmq
             List<Partition> candidates = publishLB.select(message.MaxAttemptTimes);
             foreach (var partition in candidates)
             {
-                targets.Add(partition.Broker.targetUrl());
+                targets.Add(partition.Broker.TargetUrl());
             }
 
             var metadata = new Metadata();

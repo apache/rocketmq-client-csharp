@@ -14,22 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-namespace Org.Apache.Rocketmq {
-    public class Address {
-        public Address(string host, int port) {
-            this.host = host;
-            this.port = port;
+
+namespace Org.Apache.Rocketmq
+{
+    public class Address
+    {
+        public Address(string host, int port)
+        {
+            Host = host;
+            Port = port;
         }
 
-        private string host;
-        public string Host {
-            get { return host; }
-        }
-
-        private int port;
-        public int Port {
-            get { return port; }
-        }
-
+        public string Host { get; }
+        public int Port { get; }
     }
 }
