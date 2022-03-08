@@ -14,72 +14,88 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 using System;
 
-namespace Org.Apache.Rocketmq {
-    
-    public class Partition : IEquatable<Partition>, IComparable<Partition> {
-
-        public Partition(Topic topic, Broker broker, int id, Permission permission) {
-            this.topic = topic;
-            this.broker = broker;
-            this.id = id;
-            this.permission = permission;
+namespace Org.Apache.Rocketmq
+{
+    public class Partition : IEquatable<Partition>, IComparable<Partition>
+    {
+        public Partition(Topic topic, Broker broker, int id, Permission permission)
+        {
+            Topic = topic;
+            Broker = broker;
+            Id = id;
+            Permission = permission;
         }
 
-        private Topic topic;
-        public Topic Topic{
-            get { return topic; }
-        }
+        public Topic Topic { get; }
+        public Broker Broker { get; }
+        public int Id { get; }
 
-        private Broker broker;
-        public Broker Broker {
-            get { return broker; }
-        }
+        public Permission Permission { get; }
 
-        private int id;
-        public int Id {
-            get { return id; }
-        }
-
-        Permission permission;
-        public Permission Permission {
-            get { return permission; }
-        }
-
-        public bool Equals(Partition other) {
-            return topic.Equals(other.topic) 
-                && broker.Equals(other.broker) 
-                && id.Equals(other.id) 
-                && permission == other.permission;
-        }
-
-        public override bool Equals(Object other) {
-            if (!(other is Partition)) {
+        public bool Equals(Partition other)
+        {
+            if (ReferenceEquals(null, other))
+            {
                 return false;
             }
-            return Equals(other);
+
+            if (ReferenceEquals(this, other))
+            {
+                return true;
+            }
+
+            return Equals(Topic, other.Topic) && Equals(Broker, other.Broker) && Id == other.Id &&
+                   Permission == other.Permission;
         }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj) || obj.GetType() != GetType())
+            {
+                return false;
+            }
+
+            if (ReferenceEquals(this, obj))
+            {
+                return true;
+            }
+
+            return Equals((Partition)obj);
+        }
+
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(topic, broker, id, permission);
+            return HashCode.Combine(Topic, Broker, Id, (int)Permission);
         }
 
-        public int CompareTo(Partition other) {
-            if (0 != topic.CompareTo(other.topic)) {
-                return topic.CompareTo(other.topic);
+        public int CompareTo(Partition other)
+        {
+            if (ReferenceEquals(null, other))
+            {
+                return -1;
             }
 
-            if (0 != broker.CompareTo(other.broker)) {
-                return broker.CompareTo(other.broker);
+            var compareTo = Topic.CompareTo(other.Topic);
+            if (0 == compareTo)
+            {
+                compareTo = Broker.CompareTo(other.Broker);
             }
 
-            if (0 != id.CompareTo(other.id)) {
-                return id.CompareTo(other.id);
+            if (0 == compareTo)
+            {
+                compareTo = Id.CompareTo(other.Id);
             }
 
-            return permission.CompareTo(other.permission);
+            if (0 == compareTo)
+            {
+                compareTo = Permission.CompareTo(other.Permission);
+            }
+
+            return compareTo;
         }
     }
 }

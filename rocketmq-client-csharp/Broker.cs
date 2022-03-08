@@ -17,61 +17,89 @@
 
 using System;
 
-namespace Org.Apache.Rocketmq {
-    public class Broker : IComparable<Broker>, IEquatable<Broker> {
-
-        public Broker(string name, int id, ServiceAddress address) {
-            this.name = name;
-            this.id = id;
-            this.address = address;
-        }
-
-        private string name;
-        public string Name {
-            get { return name; }
-        }
-
-        private int id;
-        public int Id {
-            get { return id; }
-        }
-
-        private ServiceAddress address;
-        public ServiceAddress Address {
-            get { return address; }
-        }
-
-        /**
-         * Context aware primary target URL.
-         */
-        public string targetUrl()
+namespace Org.Apache.Rocketmq
+{
+    public class Broker : IComparable<Broker>, IEquatable<Broker>
+    {
+        public Broker(string name, int id, ServiceAddress address)
         {
-            var addr = address.Addresses[0];
-            return string.Format("https://{0}:{1}", addr.Host, addr.Port);
+            Name = name;
+            Id = id;
+            Address = address;
         }
 
-        public int CompareTo(Broker other) {
-            if (0 != name.CompareTo(other.name)) {
-                return name.CompareTo(other.name);
-            }
+        public string Name { get; }
+        public int Id { get; }
+        public ServiceAddress Address { get; }
 
-            return id.CompareTo(other.id);
+        /// <summary>
+        /// Calculate context aware primary target URL.
+        /// </summary>
+        /// <returns>Context aware primary target URL.</returns>
+        public string TargetUrl()
+        {
+            var address = Address.Addresses[0];
+            return $"https://{address.Host}:{address.Port}";
         }
 
-        public bool Equals(Broker other) {
-            return name.Equals(other.name) && id.Equals(other.id);
-        }
-
-        public override bool Equals(Object other) {
-            if (!(other is Broker)) {
+        /// <summary>
+        /// Judge whether equals to other or not, ignore <see cref="Address"/> on purpose.
+        /// </summary>
+        public bool Equals(Broker other)
+        {
+            if (ReferenceEquals(null, other))
+            {
                 return false;
             }
-            return Equals(other as Broker);
+
+            if (ReferenceEquals(this, other))
+            {
+                return true;
+            }
+
+            return Name == other.Name && Id == other.Id;
         }
 
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj) || obj.GetType() != GetType())
+            {
+                return false;
+            }
+
+            if (ReferenceEquals(this, obj))
+            {
+                return true;
+            }
+
+            return Equals((Broker)obj);
+        }
+
+        /// <summary>
+        /// Return the hash code, ignore <see cref="Address"/> on purpose.
+        /// </summary>
         public override int GetHashCode()
         {
-            return HashCode.Combine(name, id);
+            return HashCode.Combine(Name, Id);
+        }
+
+        /// <summary>
+        /// Compare with other, ignore <see cref="Address"/> on purpose.
+        /// </summary>
+        public int CompareTo(Broker other)
+        {
+            if (ReferenceEquals(null, other))
+            {
+                return -1;
+            }
+
+            var compareTo = String.CompareOrdinal(Name, other.Name);
+            if (0 == compareTo)
+            {
+                compareTo = Id.CompareTo(other.Id);
+            }
+
+            return compareTo;
         }
     }
 }

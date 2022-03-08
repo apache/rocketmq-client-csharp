@@ -116,22 +116,22 @@ namespace Org.Apache.Rocketmq
                     }
                 }
 
-                AddressScheme scheme = AddressScheme.IPv4;
+                AddressScheme scheme = AddressScheme.Ipv4;
                 switch (partition.Broker.Endpoints.Scheme)
                 {
                     case rmq::AddressScheme.Ipv4:
                     {
-                        scheme = AddressScheme.IPv4;
+                        scheme = AddressScheme.Ipv4;
                         break;
                     }
                     case rmq::AddressScheme.Ipv6:
                     {
-                        scheme = AddressScheme.IPv6;
+                        scheme = AddressScheme.Ipv6;
                         break;
                     }
                     case rmq::AddressScheme.DomainName:
                     {
-                        scheme = AddressScheme.DOMAIN_NAME;
+                        scheme = AddressScheme.DomainName;
                         break;
                     }
                 }
