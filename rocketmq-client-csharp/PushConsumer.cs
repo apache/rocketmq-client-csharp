@@ -14,10 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-using Apache.Rocketmq.V1;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using rmq = Apache.Rocketmq.V1;
+using rmq = Apache.Rocketmq.V2;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -30,7 +29,7 @@ namespace Org.Apache.Rocketmq
             _group = group;
             _topicFilterExpressionMap = new ConcurrentDictionary<string, FilterExpression>();
             _topicAssignmentsMap = new ConcurrentDictionary<string, List<rmq::Assignment>>();
-            _processQueueMap = new ConcurrentDictionary<Assignment, ProcessQueue>();
+            _processQueueMap = new ConcurrentDictionary<rmq::Assignment, ProcessQueue>();
             _scanAssignmentCTS = new CancellationTokenSource();
             _scanExpiredProcessQueueCTS = new CancellationTokenSource();
         }
@@ -79,7 +78,7 @@ namespace Org.Apache.Rocketmq
         private async Task scanLoadAssignments()
         {
             Logger.Debug("Start to scan load assignments from server");
-            List<Task<List<Assignment>>> tasks = new List<Task<List<Assignment>>>();
+            List<Task<List<rmq::Assignment>>> tasks = new List<Task<List<rmq::Assignment>>>();
             foreach (var item in _topicFilterExpressionMap)
             {
                 tasks.Add(scanLoadAssignment(item.Key, _group));
@@ -112,17 +111,17 @@ namespace Org.Apache.Rocketmq
             }
         }
 
-        private void checkAndUpdateAssignments(List<Assignment> assignments)
+        private void checkAndUpdateAssignments(List<rmq::Assignment> assignments)
         {
             if (assignments.Count == 0)
             {
                 return;
             }
 
-            string topic = assignments[0].Partition.Topic.Name;
+            string topic = assignments[0].MessageQueue.Topic.Name;
 
             // Compare to generate or cancel pop-cycles
-            List<Assignment> existing;
+            List<rmq::Assignment> existing;
             _topicAssignmentsMap.TryGetValue(topic, out existing);
 
             foreach (var assignment in assignments)
@@ -139,7 +138,7 @@ namespace Org.Apache.Rocketmq
                 {
                     if (!assignments.Contains(assignment))
                     {
-                        Logger.Info($"Stop receiving messages from {assignment.Partition.ToString()}");
+                        Logger.Info($"Stop receiving messages from {assignment.MessageQueue.ToString()}");
                         CancelPop(assignment);
                     }
                 }
@@ -147,7 +146,7 @@ namespace Org.Apache.Rocketmq
 
         }
 
-        private void ExecutePop(Assignment assignment)
+        private void ExecutePop(rmq::Assignment assignment)
         {
             var processQueue = new ProcessQueue();
             if (_processQueueMap.TryAdd(assignment, processQueue))
@@ -159,9 +158,9 @@ namespace Org.Apache.Rocketmq
             }
         }
 
-        private async Task ExecutePop0(Assignment assignment)
+        private async Task ExecutePop0(rmq::Assignment assignment)
         {
-            Logger.Info($"Start to pop {assignment.Partition.ToString()}");
+            Logger.Info($"Start to pop {assignment.MessageQueue.ToString()}");
             while (true)
             {
                 try
@@ -187,7 +186,7 @@ namespace Org.Apache.Rocketmq
 
                     foreach (var message in failed)
                     {
-                        await base.Nack(message._sourceHost, _group, message.Topic, message._receiptHandle, message.MessageId);
+                        await base.ChangeInvisibleDuration(message._sourceHost, _group, message.Topic, message._receiptHandle, message.MessageId);
                     }
 
                     foreach (var message in messages)
@@ -211,7 +210,7 @@ namespace Org.Apache.Rocketmq
             }
         }
 
-        private void CancelPop(Assignment assignment)
+        private void CancelPop(rmq::Assignment assignment)
         {
             if (!_processQueueMap.ContainsKey(assignment))
             {
@@ -225,37 +224,8 @@ namespace Org.Apache.Rocketmq
             }
         }
 
-        public override void PrepareHeartbeatData(HeartbeatRequest request)
+        public override void PrepareHeartbeatData(rmq::HeartbeatRequest request)
         {
-            request.ClientId = clientId();
-            var consumerData = new ConsumerData();
-            consumerData.ConsumeType = ConsumeMessageType.Passive;
-            consumerData.ConsumeModel = ConsumeModel.Clustering;
-            consumerData.Group = new Resource();
-            consumerData.Group.ResourceNamespace = resourceNamespace();
-            consumerData.Group.Name = _group;
-
-            foreach (var item in _topicFilterExpressionMap)
-            {
-                var sub = new SubscriptionEntry();
-                sub.Topic = new Resource();
-                sub.Topic.ResourceNamespace = _resourceNamespace;
-                sub.Topic.Name = item.Key;
-
-                sub.Expression = new rmq::FilterExpression();
-                switch (item.Value.Type)
-                {
-                    case ExpressionType.TAG:
-                        sub.Expression.Type = rmq::FilterType.Tag;
-                        break;
-                    case ExpressionType.SQL92:
-                        sub.Expression.Type = rmq::FilterType.Sql;
-                        break;
-                }
-                sub.Expression.Expression = item.Value.Expression;
-                consumerData.Subscriptions.Add(sub);
-            }
-            request.ConsumerData = consumerData;
         }
 
         public void Subscribe(string topic, string expression, ExpressionType type)
@@ -282,7 +252,7 @@ namespace Org.Apache.Rocketmq
 
         private ConcurrentDictionary<string, List<rmq::Assignment>> _topicAssignmentsMap;
 
-        private ConcurrentDictionary<Assignment, ProcessQueue> _processQueueMap;
+        private ConcurrentDictionary<rmq::Assignment, ProcessQueue> _processQueueMap;
 
         private CancellationTokenSource _scanExpiredProcessQueueCTS;
 

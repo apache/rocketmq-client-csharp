@@ -25,8 +25,6 @@ namespace Org.Apache.Rocketmq
 
         Task Heartbeat();
 
-        Task HealthCheck();
-
         Task<bool> NotifyClientTermination();
 
     }

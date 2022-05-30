@@ -17,7 +17,7 @@
 using System;
 using Grpc.Core;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using rmq = Apache.Rocketmq.V1;
+using rmq = Apache.Rocketmq.V2;
 
 namespace Org.Apache.Rocketmq {
 

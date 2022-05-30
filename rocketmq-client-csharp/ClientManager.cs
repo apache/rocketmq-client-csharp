@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-using rmq = Apache.Rocketmq.V1;
+using rmq = Apache.Rocketmq.V2;
 using System;
 using System.IO;
 using System.IO.Compression;
@@ -80,14 +80,14 @@ namespace Org.Apache.Rocketmq
             var rpcClient = GetRpcClient(target);
             var queryRouteResponse = await rpcClient.QueryRoute(metadata, request, timeout);
 
-            if (queryRouteResponse.Common.Status.Code != ((int)Google.Rpc.Code.Ok))
+            if (queryRouteResponse.Status.Code != rmq::Code.Ok)
             {
                 // Raise an application layer exception
             }
 
             var partitions = new List<Partition>();
             // Translate protobuf object to domain specific one
-            foreach (var partition in queryRouteResponse.Partitions)
+            foreach (var partition in queryRouteResponse.MessageQueues)
             {
                 var topic = new Topic(partition.Topic.ResourceNamespace, partition.Topic.Name);
                 var id = partition.Id;
@@ -156,23 +156,8 @@ namespace Org.Apache.Rocketmq
         {
             var rpcClient = GetRpcClient(target);
             var response = await rpcClient.Heartbeat(metadata, request, timeout);
-            Logger.Debug($"Heartbeat to {target} response status: {response.Common.Status.ToString()}");
-            return response.Common.Status.Code == (int)Google.Rpc.Code.Ok;
-        }
-
-        public async Task<Boolean> HealthCheck(string target, grpc::Metadata metadata, rmq::HealthCheckRequest request, TimeSpan timeout)
-        {
-            var rpcClient = GetRpcClient(target);
-            try
-            {
-                var response = await rpcClient.HealthCheck(metadata, request, timeout);
-                return response.Common.Status.Code == (int)Google.Rpc.Code.Ok;
-            }
-            catch (System.Exception e)
-            {
-                Logger.Debug(e, $"Health-check to {target} failed");
-                return false;
-            }
+            Logger.Debug($"Heartbeat to {target} response status: {response.Status.ToString()}");
+            return response.Status.Code == rmq::Code.Ok;
         }
 
         public async Task<rmq::SendMessageResponse> SendMessage(string target, grpc::Metadata metadata,
@@ -189,17 +174,17 @@ namespace Org.Apache.Rocketmq
             var rpcClient = GetRpcClient(target);
             rmq::NotifyClientTerminationResponse response =
                 await rpcClient.NotifyClientTermination(metadata, request, timeout);
-            return response.Common.Status.Code == ((int)Google.Rpc.Code.Ok);
+            return response.Status.Code == rmq::Code.Ok;
         }
 
         public async Task<List<rmq::Assignment>> QueryLoadAssignment(string target, grpc::Metadata metadata, rmq::QueryAssignmentRequest request, TimeSpan timeout)
         {
             var rpcClient = GetRpcClient(target);
             rmq::QueryAssignmentResponse response = await rpcClient.QueryAssignment(metadata, request, timeout);
-            if (response.Common.Status.Code != (int)Google.Rpc.Code.Ok)
+            if (response.Status.Code != rmq::Code.Ok)
             {
                 // TODO: Build exception hierarchy
-                throw new Exception($"Failed to query load assignment from server. Cause: {response.Common.Status.Message}");
+                throw new Exception($"Failed to query load assignment from server. Cause: {response.Status.Message}");
             }
 
             List<rmq::Assignment> assignments = new List<rmq.Assignment>();
@@ -213,17 +198,11 @@ namespace Org.Apache.Rocketmq
         public async Task<List<Message>> ReceiveMessage(string target, grpc::Metadata metadata, rmq::ReceiveMessageRequest request, TimeSpan timeout)
         {
             var rpcClient = GetRpcClient(target);
-            rmq::ReceiveMessageResponse response = await rpcClient.ReceiveMessage(metadata, request, timeout);
-            if (response.Common.Status.Code != (int)Google.Rpc.Code.Ok)
-            {
-                throw new Exception($"Failed to receive messages from {target}, cause: {response.Common.Status.Message}");
-            }
+            List<rmq::ReceiveMessageResponse> response = await rpcClient.ReceiveMessage(metadata, request, timeout);
+            // TODO: 
 
             List<Message> messages = new List<Message>();
-            foreach (var message in response.Messages)
-            {
-                messages.Add(convert(target, message));
-            }
+            
             return messages;
         }
 
@@ -231,52 +210,52 @@ namespace Org.Apache.Rocketmq
         {
             var msg = new Message();
             msg.Topic = message.Topic.Name;
-            msg.messageId = message.SystemAttribute.MessageId;
-            msg.Tag = message.SystemAttribute.Tag;
+            msg.messageId = message.SystemProperties.MessageId;
+            msg.Tag = message.SystemProperties.Tag;
 
             // Validate message body checksum
             byte[] raw = message.Body.ToByteArray();
-            if (rmq::DigestType.Crc32 == message.SystemAttribute.BodyDigest.Type)
+            if (rmq::DigestType.Crc32 == message.SystemProperties.BodyDigest.Type)
             {
                 uint checksum = Force.Crc32.Crc32Algorithm.Compute(raw, 0, raw.Length);
-                if (!message.SystemAttribute.BodyDigest.Checksum.Equals(checksum.ToString("X")))
+                if (!message.SystemProperties.BodyDigest.Checksum.Equals(checksum.ToString("X")))
                 {
                     msg._bodyChecksumVerified = false;
                 }
             }
-            else if (rmq::DigestType.Md5 == message.SystemAttribute.BodyDigest.Type)
+            else if (rmq::DigestType.Md5 == message.SystemProperties.BodyDigest.Type)
             {
                 var checksum = MD5.HashData(raw);
-                if (!message.SystemAttribute.BodyDigest.Checksum.Equals(Convert.ToHexString(checksum)))
+                if (!message.SystemProperties.BodyDigest.Checksum.Equals(Convert.ToHexString(checksum)))
                 {
                     msg._bodyChecksumVerified = false;
                 }
             }
-            else if (rmq::DigestType.Sha1 == message.SystemAttribute.BodyDigest.Type)
+            else if (rmq::DigestType.Sha1 == message.SystemProperties.BodyDigest.Type)
             {
                 var checksum = SHA1.HashData(raw);
-                if (!message.SystemAttribute.BodyDigest.Checksum.Equals(Convert.ToHexString(checksum)))
+                if (!message.SystemProperties.BodyDigest.Checksum.Equals(Convert.ToHexString(checksum)))
                 {
                     msg._bodyChecksumVerified = false;
                 }
             }
 
-            foreach (var entry in message.UserAttribute)
+            foreach (var entry in message.UserProperties)
             {
                 msg.UserProperties.Add(entry.Key, entry.Value);
             }
 
-            msg._receiptHandle = message.SystemAttribute.ReceiptHandle;
+            msg._receiptHandle = message.SystemProperties.ReceiptHandle;
             msg._sourceHost = sourceHost;
 
-            foreach (var key in message.SystemAttribute.Keys)
+            foreach (var key in message.SystemProperties.Keys)
             {
                 msg.Keys.Add(key);
             }
 
-            msg._deliveryAttempt = message.SystemAttribute.DeliveryAttempt;
+            msg._deliveryAttempt = message.SystemProperties.DeliveryAttempt;
 
-            if (message.SystemAttribute.BodyEncoding == rmq::Encoding.Gzip)
+            if (message.SystemProperties.BodyEncoding == rmq::Encoding.Gzip)
             {
                 // Decompress/Inflate message body
                 var inputStream = new MemoryStream(message.Body.ToByteArray());
@@ -297,14 +276,14 @@ namespace Org.Apache.Rocketmq
         {
             var rpcClient = GetRpcClient(target);
             var response = await rpcClient.AckMessage(metadata, request, timeout);
-            return response.Common.Status.Code == ((int)Google.Rpc.Code.Ok);
+            return response.Status.Code == rmq::Code.Ok;
         }
 
-        public async Task<Boolean> Nack(string target, grpc::Metadata metadata, rmq::NackMessageRequest request, TimeSpan timeout)
+        public async Task<Boolean> ChangeInvisibleDuration(string target, grpc::Metadata metadata, rmq::ChangeInvisibleDurationRequest request, TimeSpan timeout)
         {
             var rpcClient = GetRpcClient(target);
-            var response = await rpcClient.NackMessage(metadata, request, timeout);
-            return response.Common.Status.Code == ((int)Google.Rpc.Code.Ok);
+            var response = await rpcClient.ChangeInvisibleDuration(metadata, request, timeout);
+            return response.Status.Code == rmq::Code.Ok;
         }
 
         public async Task Shutdown()

@@ -17,7 +17,7 @@
 
 using System;
 using System.Threading.Tasks;
-using rmq = Apache.Rocketmq.V1;
+using rmq = Apache.Rocketmq.V2;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using Google.Protobuf;
@@ -68,30 +68,31 @@ namespace Org.Apache.Rocketmq
             var publishLB = loadBalancer[message.Topic];
 
             var request = new rmq::SendMessageRequest();
-            request.Message = new rmq::Message();
-            request.Message.Body = ByteString.CopyFrom(message.Body);
-            request.Message.Topic = new rmq::Resource();
-            request.Message.Topic.ResourceNamespace = resourceNamespace();
-            request.Message.Topic.Name = message.Topic;
+            var entry = new rmq::Message();
+            entry.Body = ByteString.CopyFrom(message.Body);
+            entry.Topic = new rmq::Resource();
+            entry.Topic.ResourceNamespace = resourceNamespace();
+            entry.Topic.Name = message.Topic;
+            request.Messages.Add(entry);
 
             // User properties
             foreach (var item in message.UserProperties)
             {
-                request.Message.UserAttribute.Add(item.Key, item.Value);
+                entry.UserProperties.Add(item.Key, item.Value);
             }
 
-            request.Message.SystemAttribute = new rmq::SystemAttribute();
-            request.Message.SystemAttribute.MessageId = message.MessageId;
+            entry.SystemProperties = new rmq::SystemProperties();
+            entry.SystemProperties.MessageId = message.MessageId;
             if (!string.IsNullOrEmpty(message.Tag))
             {
-                request.Message.SystemAttribute.Tag = message.Tag;
+                entry.SystemProperties.Tag = message.Tag;
             }
 
             if (0 != message.Keys.Count)
             {
                 foreach (var key in message.Keys)
                 {
-                    request.Message.SystemAttribute.Keys.Add(key);
+                    entry.SystemProperties.Keys.Add(key);
                 }
             }
 
@@ -113,9 +114,10 @@ namespace Org.Apache.Rocketmq
                 try
                 {
                     rmq::SendMessageResponse response = await Manager.SendMessage(target, metadata, request, getIoTimeout());
-                    if (null != response && (int)global::Google.Rpc.Code.Ok == response.Common.Status.Code)
+                    if (null != response && rmq::Code.Ok == response.Status.Code)
                     {
-                        var messageId = response.MessageId;
+
+                        var messageId = response.Entries[0].MessageId;
                         return new SendResult(messageId);
                     }
                 }

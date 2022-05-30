@@ -20,7 +20,7 @@ using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
-using rmq = Apache.Rocketmq.V1;
+using rmq = Apache.Rocketmq.V2;
 using grpc = global::Grpc.Core;
 using NLog;
 
@@ -56,12 +56,6 @@ namespace Org.Apache.Rocketmq
                 await UpdateTopicRoute();
 
             }, 30, _updateTopicRouteCts.Token);
-
-            schedule(async () =>
-            {
-                await HealthCheck();
-            }, 30, _healthCheckCts.Token);
-
         }
 
         public virtual void Shutdown()
@@ -199,8 +193,8 @@ namespace Org.Apache.Rocketmq
         protected rmq::Endpoints AccessEndpoint(string nameServer)
         {
             var endpoints = new rmq::Endpoints();
-            endpoints.Scheme = global::Apache.Rocketmq.V1.AddressScheme.Ipv4;
-            var address = new global::Apache.Rocketmq.V1.Address();
+            endpoints.Scheme = rmq::AddressScheme.Ipv4;
+            var address = new rmq::Address();
             int pos = nameServer.LastIndexOf(':');
             address.Host = nameServer.Substring(0, pos);
             address.Port = Int32.Parse(nameServer.Substring(pos + 1));
@@ -310,30 +304,6 @@ namespace Org.Apache.Rocketmq
             return endpoints;
         }
 
-        public async Task HealthCheck()
-        {
-            var request = new rmq::HealthCheckRequest();
-
-            var metadata = new grpc::Metadata();
-            Signature.sign(this, metadata);
-            List<Task<Boolean>> tasks = new List<Task<Boolean>>();
-            List<string> endpoints = BlockedBrokerEndpoints();
-            foreach (var endpoint in endpoints)
-            {
-                tasks.Add(Manager.HealthCheck(endpoint, metadata, request, getIoTimeout()));
-            }
-            var result = await Task.WhenAll(tasks);
-            int i = 0;
-            foreach (var ok in result)
-            {
-                if (ok)
-                {
-                    RemoveFromBlockList(endpoints[i]);
-                }
-                ++i;
-            }
-        }
-
         private void RemoveFromBlockList(string endpoint)
         {
 
@@ -344,7 +314,6 @@ namespace Org.Apache.Rocketmq
             // Pick a broker randomly
             string target = FilterBroker((s) => true);
             var request = new rmq::QueryAssignmentRequest();
-            request.ClientId = clientId();
             request.Topic = new rmq::Resource();
             request.Topic.ResourceNamespace = _resourceNamespace;
             request.Topic.Name = topic;
@@ -368,7 +337,7 @@ namespace Org.Apache.Rocketmq
 
         private string TargetUrl(rmq::Assignment assignment)
         {
-            var broker = assignment.Partition.Broker;
+            var broker = assignment.MessageQueue.Broker;
             var addresses = broker.Endpoints.Addresses;
             // TODO: use the first address for now. 
             var address = addresses[0];
@@ -385,7 +354,7 @@ namespace Org.Apache.Rocketmq
             request.Group = new rmq::Resource();
             request.Group.ResourceNamespace = _resourceNamespace;
             request.Group.Name = group;
-            request.Partition = assignment.Partition;
+            request.MessageQueue = assignment.MessageQueue;
             var messages = await Manager.ReceiveMessage(targetUrl, metadata, request, getLongPollingTimeout());
             return messages;
         }
@@ -393,8 +362,6 @@ namespace Org.Apache.Rocketmq
         public async Task<Boolean> Ack(string target, string group, string topic, string receiptHandle, String messageId)
         {
             var request = new rmq::AckMessageRequest();
-            request.ClientId = clientId();
-            request.ReceiptHandle = receiptHandle;
             request.Group = new rmq::Resource();
             request.Group.ResourceNamespace = _resourceNamespace;
             request.Group.Name = group;
@@ -403,17 +370,19 @@ namespace Org.Apache.Rocketmq
             request.Topic.ResourceNamespace = _resourceNamespace;
             request.Topic.Name = topic;
 
-            request.MessageId = messageId;
+            var entry = new rmq::AckMessageEntry();
+            entry.ReceiptHandle = receiptHandle;
+            entry.MessageId = messageId;
+            request.Entries.Add(entry);
 
             var metadata = new grpc::Metadata();
             Signature.sign(this, metadata);
             return await Manager.Ack(target, metadata, request, getIoTimeout());
         }
 
-        public async Task<Boolean> Nack(string target, string group, string topic, string receiptHandle, String messageId)
+        public async Task<Boolean> ChangeInvisibleDuration(string target, string group, string topic, string receiptHandle, String messageId)
         {
-            var request = new rmq::NackMessageRequest();
-            request.ClientId = clientId();
+            var request = new rmq::ChangeInvisibleDurationRequest();
             request.ReceiptHandle = receiptHandle;
             request.Group = new rmq::Resource();
             request.Group.ResourceNamespace = _resourceNamespace;
@@ -427,14 +396,14 @@ namespace Org.Apache.Rocketmq
 
             var metadata = new grpc::Metadata();
             Signature.sign(this, metadata);
-            return await Manager.Nack(target, metadata, request, getIoTimeout());
+            return await Manager.ChangeInvisibleDuration(target, metadata, request, getIoTimeout());
         }
 
         public async Task<bool> NotifyClientTermination()
         {
             List<string> endpoints = AvailableBrokerEndpoints();
             var request = new rmq::NotifyClientTerminationRequest();
-            request.ClientId = clientId();
+
 
             var metadata = new grpc.Metadata();
             Signature.sign(this, metadata);

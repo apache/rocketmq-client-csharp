@@ -1,7 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Org.Apache.Rocketmq;
 using Grpc.Net.Client;
-using Apache.Rocketmq.V1;
+using rmq = Apache.Rocketmq.V2;
 
 using System;
 using System.Collections.Concurrent;
@@ -15,27 +15,27 @@ namespace tests
         [TestMethod]
         public void TestMethod1()
         {
-            Apache.Rocketmq.V1.Permission perm = Apache.Rocketmq.V1.Permission.None;
+            rmq::Permission perm = rmq::Permission.None;
             switch(perm) {
-                case Apache.Rocketmq.V1.Permission.None:
+                case rmq::Permission.None:
                 {
                     Console.WriteLine("None");
                     break;
                 }
 
-                case Apache.Rocketmq.V1.Permission.Read:
+                case rmq::Permission.Read:
                 {
                     Console.WriteLine("Read");
                     break;
                 }
 
-                case Apache.Rocketmq.V1.Permission.Write:
+                case rmq::Permission.Write:
                 {
                     Console.WriteLine("Write");
                     break;
                 }
 
-                case Apache.Rocketmq.V1.Permission.ReadWrite:
+                case rmq::Permission.ReadWrite:
                 {
                     Console.WriteLine("ReadWrite");
                     break;
