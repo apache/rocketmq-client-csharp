@@ -72,6 +72,13 @@ namespace Org.Apache.Rocketmq
             return handler;
         }
 
+        public AsyncDuplexStreamingCall<rmq::TelemetryCommand, rmq::TelemetryCommand> Telemetry(Metadata metadata)
+        {
+            var deadline = DateTime.UtcNow.Add(TimeSpan.FromSeconds(3));
+            var callOptions = new CallOptions(metadata, deadline);
+            return _stub.Telemetry(callOptions);
+        }
+
         public async Task<rmq::QueryRouteResponse> QueryRoute(Metadata metadata, rmq::QueryRouteRequest request, TimeSpan timeout)
         {
             var deadline = DateTime.UtcNow.Add(timeout);

@@ -36,7 +36,7 @@ namespace Org.Apache.Rocketmq
         public override void Start()
         {
             base.Start();
-            // More initalization
+            // More initialization
         }
 
         public override void Shutdown()
