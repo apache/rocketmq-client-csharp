@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 using System;
+using System.Collections.Generic;
+using rmq = Apache.Rocketmq.V2;
 
 namespace Org.Apache.Rocketmq {
 
@@ -24,8 +26,11 @@ namespace Org.Apache.Rocketmq {
             var hostName = System.Net.Dns.GetHostName();
             var pid = System.Diagnostics.Process.GetCurrentProcess().Id;
             this.clientId_ = string.Format("{0}@{1}#{2}", hostName, pid, instanceName_);
-            this._ioTimeout = TimeSpan.FromSeconds(3);
+            this._requestTimeout = TimeSpan.FromSeconds(3);
             this.longPollingIoTimeout_ = TimeSpan.FromSeconds(30);
+            this.client_type_ = rmq::ClientType.Unspecified;
+            this.access_point_ = new rmq::Endpoints();
+            this.back_off_policy_ = new rmq::RetryPolicy();
         }
 
         public string region() {
@@ -64,11 +69,16 @@ namespace Org.Apache.Rocketmq {
             set { _tenantId = value; }
         }
 
-        public TimeSpan getIoTimeout() {
-            return _ioTimeout;
-        }
-        public TimeSpan IoTimeout {
-            set { _ioTimeout = value; }
+        public TimeSpan RequestTimeout
+        {
+            get
+            {
+                return _requestTimeout;
+            }
+            set
+            {
+                _requestTimeout = value;
+            }
         }
 
         public TimeSpan getLongPollingTimeout() {
@@ -109,7 +119,7 @@ namespace Org.Apache.Rocketmq {
 
         private string _tenantId;
 
-        private TimeSpan _ioTimeout;
+        private TimeSpan _requestTimeout;
 
         private TimeSpan longPollingIoTimeout_;
 
@@ -120,6 +130,49 @@ namespace Org.Apache.Rocketmq {
         private bool tracingEnabled_ = false;
 
         private string instanceName_ = "default";
+
+        private rmq::ClientType client_type_;
+        public rmq::ClientType ClientType
+        {
+            get { return client_type_; }
+            set { client_type_ = value; }
+        }
+
+
+        private rmq::Endpoints access_point_;
+
+        public rmq::AddressScheme AccessPointAddressScheme
+        {
+            get { return access_point_.Scheme; }
+            set { access_point_.Scheme = value; }
+        }
+
+        public List<rmq::Address> AccessPointAddresses
+        {
+            get
+            {
+                List<rmq::Address> addresses = new List<rmq::Address>();
+                foreach (var item in access_point_.Addresses)
+                {
+                    addresses.Add(item);
+                }
+                return addresses;
+            }
+
+            set
+            {
+                access_point_.Addresses.Clear();
+                foreach (var item in value)
+                {
+                    access_point_.Addresses.Add(item);
+                }
+            }
+        }
+
+        private rmq::RetryPolicy back_off_policy_;
+
+
+
     }
 
 }

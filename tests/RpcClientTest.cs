@@ -117,12 +117,12 @@ namespace Org.Apache.Rocketmq
             address.Port = 8081;
             address.Host = "11.166.42.94";
             request.Endpoints.Addresses.Add(address);
-            var response = rpc_client.QueryRoute(metadata, request, client_config.getIoTimeout());
+            var response = rpc_client.QueryRoute(metadata, request, client_config.RequestTimeout);
             var result = response.GetAwaiter().GetResult();
         }
 
         [TestMethod]
-        public void TestSend()
+        public async Task TestSend()
         {
             string target = "https://11.166.42.94:8081";
             var rpc_client = new RpcClient(target);
@@ -131,8 +131,16 @@ namespace Org.Apache.Rocketmq
             Signature.sign(client_config, metadata);
 
             var request = new rmq::SendMessageRequest();
-
-
+            var message = new rmq::Message();
+            message.Topic = new rmq::Resource();
+            message.Topic.Name = "cpp_sdk_standard";
+            message.Body = Google.Protobuf.ByteString.CopyFromUtf8("Test Body");
+            message.SystemProperties = new rmq::SystemProperties();
+            message.SystemProperties.Tag = "TagA";
+            message.SystemProperties.MessageId = "abc";
+            request.Messages.Add(message);
+            var response = await rpc_client.SendMessage(metadata, request, TimeSpan.FromSeconds(3));
+            Assert.AreEqual(rmq::Code.Ok, response.Status.Code);
         }
     }
 }

@@ -113,7 +113,7 @@ namespace Org.Apache.Rocketmq
             {
                 try
                 {
-                    rmq::SendMessageResponse response = await Manager.SendMessage(target, metadata, request, getIoTimeout());
+                    rmq::SendMessageResponse response = await Manager.SendMessage(target, metadata, request, RequestTimeout);
                     if (null != response && rmq::Code.Ok == response.Status.Code)
                     {
 

@@ -15,25 +15,19 @@
  * limitations under the License.
  */
 using System;
+using System.Text;
+using grpc = global::Grpc.Core;
+using System.Security.Cryptography;
 
-namespace Org.Apache.Rocketmq {
-    public interface IClientConfig {
-        string region();
+namespace Org.Apache.Rocketmq
+{
 
-        string serviceName();
+    class Session
+    {
 
-        string resourceNamespace();
+        public string Target { get; }
 
-        ICredentialsProvider credentialsProvider();
 
-        string tenantId();
+    };
 
-        TimeSpan getLongPollingTimeout();
-
-        string getGroupName();
-
-        string clientId();
-
-        bool isTracingEnabled();
-    }
 }
