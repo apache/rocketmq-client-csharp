@@ -33,5 +33,7 @@ namespace Org.Apache.Rocketmq {
         public const string CLIENT_VERSION_KEY = "x-mq-client-version";
         public const string PROTOCOL_VERSION_KEY = "x-mq-protocol-version";
         public const string REQUEST_ID_KEY = "x-mq-request-id";
+
+        public const string CLIENT_ID_KEY = "x-mq-client-id";
     }
 }

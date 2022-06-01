@@ -50,6 +50,9 @@ namespace Org.Apache.Rocketmq
             address.Port = 8081;
             address.Host = "11.166.42.94";
             cmd.Settings.AccessPoint.Addresses.Add(address);
+            cmd.Settings.RequestTimeout = new Google.Protobuf.WellKnownTypes.Duration();
+            cmd.Settings.RequestTimeout.Seconds = 3;
+            cmd.Settings.RequestTimeout.Nanos = 0;
             cmd.Settings.Publishing = new rmq::Publishing();
             var topic = new rmq::Resource();
             topic.Name = "cpp_sdk_standard";
@@ -69,14 +72,32 @@ namespace Org.Apache.Rocketmq
             Console.WriteLine("Command written");
             if (await reader.MoveNext(cts.Token))
             {
-                // var cmd = reader.Current;
-                Console.WriteLine("Server responded");
+                var response = reader.Current;
+                switch (response.CommandCase)
+                {
+                    case rmq::TelemetryCommand.CommandOneofCase.Settings:
+                        {
+                            var responded_settings = response.Settings;
+                            Console.WriteLine($"{responded_settings.ToString()}");
+                            break;
+                        }
+                    case rmq::TelemetryCommand.CommandOneofCase.None:
+                        {
+                            Console.WriteLine($"Unknown response command type: {response.Status.ToString()}");
+                            break;
+                        }
+                }
+                Console.WriteLine("Server responded ");
             }
             else
             {
                 Console.WriteLine("Server is not responding");
-            }
+                var status = duplexStreaming.GetStatus();
+                Console.WriteLine($"status={status.ToString()}");
 
+                var trailers = duplexStreaming.GetTrailers();
+                Console.WriteLine($"trailers={trailers.ToString()}");
+            }
         }
 
         [TestMethod]
@@ -100,6 +121,18 @@ namespace Org.Apache.Rocketmq
             var result = response.GetAwaiter().GetResult();
         }
 
-    }
+        [TestMethod]
+        public void TestSend()
+        {
+            string target = "https://11.166.42.94:8081";
+            var rpc_client = new RpcClient(target);
+            var client_config = new ClientConfig();
+            var metadata = new grpc::Metadata();
+            Signature.sign(client_config, metadata);
 
+            var request = new rmq::SendMessageRequest();
+
+
+        }
+    }
 }
