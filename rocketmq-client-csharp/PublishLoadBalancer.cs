@@ -16,6 +16,7 @@
  */
 using System;
 using System.Collections.Generic;
+using rmq = Apache.Rocketmq.V2;
 
 namespace Org.Apache.Rocketmq
 {
@@ -23,51 +24,51 @@ namespace Org.Apache.Rocketmq
     {
         public PublishLoadBalancer(TopicRouteData route)
         {
-            this.partitions = new List<Partition>();
-            foreach (var partition in route.Partitions)
+            this._messageQueues = new List<rmq::MessageQueue>();
+            foreach (var messageQueue in route.MessageQueues)
             {
-                if (Permission.None == partition.Permission)
+                if (rmq::Permission.Unspecified == messageQueue.Permission)
                 {
                     continue;
                 }
 
-                if (Permission.Read == partition.Permission)
+                if (rmq::Permission.Read == messageQueue.Permission)
                 {
                     continue;
                 }
 
-                this.partitions.Add(partition);
+                this._messageQueues.Add(messageQueue);
             }
 
-            this.partitions.Sort();
+            this._messageQueues.Sort(Utilities.CompareMessageQueue);
             Random random = new Random();
-            this.roundRobinIndex = random.Next(0, this.partitions.Count);
+            this.roundRobinIndex = random.Next(0, this._messageQueues.Count);
         }
 
         public void update(TopicRouteData route)
         {
-            List<Partition> partitions = new List<Partition>();
-            foreach (var partition in route.Partitions)
+            List<rmq::MessageQueue> partitions = new List<rmq::MessageQueue>();
+            foreach (var partition in route.MessageQueues)
             {
-                if (Permission.None == partition.Permission)
+                if (rmq::Permission.Unspecified == partition.Permission)
                 {
                     continue;
                 }
 
-                if (Permission.Read == partition.Permission)
+                if (rmq::Permission.Read == partition.Permission)
                 {
                     continue;
                 }
                 partitions.Add(partition);
             }
             partitions.Sort();
-            this.partitions = partitions;
+            this._messageQueues = partitions;
         }
 
         /**
          * Accept a partition iff its broker is different.
          */
-        private bool accept(List<Partition> existing, Partition partition)
+        private bool accept(List<rmq::MessageQueue> existing, rmq::MessageQueue messageQueue)
         {
             if (0 == existing.Count)
             {
@@ -76,7 +77,7 @@ namespace Org.Apache.Rocketmq
 
             foreach (var item in existing)
             {
-                if (item.Broker.Equals(partition.Broker))
+                if (item.Broker.Equals(messageQueue.Broker))
                 {
                     return false;
                 }
@@ -84,11 +85,11 @@ namespace Org.Apache.Rocketmq
             return true;
         }
 
-        public List<Partition> select(int maxAttemptTimes)
+        public List<rmq::MessageQueue> select(int maxAttemptTimes)
         {
-            List<Partition> result = new List<Partition>();
+            List<rmq::MessageQueue> result = new List<rmq::MessageQueue>();
 
-            List<Partition> all = this.partitions;
+            List<rmq::MessageQueue> all = this._messageQueues;
             if (0 == all.Count)
             {
                 return result;
@@ -112,7 +113,7 @@ namespace Org.Apache.Rocketmq
             return result;
         }
 
-        private List<Partition> partitions;
+        private List<rmq::MessageQueue> _messageQueues;
 
         private int roundRobinIndex;
     }

@@ -14,25 +14,37 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
- using Microsoft.VisualStudio.TestTools.UnitTesting;
+using rmq = Apache.Rocketmq.V2;
 
-namespace Org.Apache.Rocketmq {
-    [TestClass]
-    public class BrokerTest {
+using System.Collections.Generic;
 
-        [TestMethod]
-        public void testCompareTo() {
-            var b1 = new Broker("b1", 0, null);
-            var b2 = new Broker("b1", 1, null);
-            Assert.AreEqual(b1.CompareTo(b2), -1);
+namespace Org.Apache.Rocketmq
+{
+    // Settings for publishing
+    public class Publishing
+    {
+        private List<rmq::Resource> _topics;
+        public List<rmq::Resource> Topics
+        {
+            get { return _topics; }
+            set { _topics = value; }
         }
 
-        [TestMethod]
-        public void testEquals() {
-            var b1 = new Broker("b1", 0, null);
-            var b2 = new Broker("b1", 0, null);
-            Assert.AreEqual(b1, b2, "Equals method should be employed to test equality");
+        private int _compressBodyThreshold;
+        public int CompressBodyThreshold
+        {
+            get { return _compressBodyThreshold; }
+            set { _compressBodyThreshold = value; }
+        }
+
+        private int _maxBodySize;
+        public int MaxBodySize
+        {
+            get { return _maxBodySize; }
+            set { _maxBodySize = value; }
         }
 
     }
+
+
 }

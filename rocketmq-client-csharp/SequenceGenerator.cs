@@ -17,6 +17,7 @@
 using System;
 using System.Threading;
 using System.Net.NetworkInformation;
+using NLog;
 
 namespace Org.Apache.Rocketmq
 {
@@ -27,6 +28,7 @@ namespace Org.Apache.Rocketmq
      */
     public sealed class SequenceGenerator
     {
+        private static readonly Logger Logger = MqLogManager.Instance.GetCurrentClassLogger();
 
         public static SequenceGenerator Instance
         {
@@ -94,10 +96,11 @@ namespace Org.Apache.Rocketmq
             {
                 if (nic.OperationalStatus == OperationalStatus.Up)
                 {
-                    if (nic.Name.Equals("lo"))
+                    if (nic.Name.StartsWith("lo"))
                     {
                         continue;
                     }
+                    Logger.Debug($"NIC={nic.Name}");
                     return nic.GetPhysicalAddress().GetAddressBytes();
                 }
             }

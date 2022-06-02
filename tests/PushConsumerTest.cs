@@ -53,11 +53,8 @@ namespace Org.Apache.Rocketmq
         [ClassInitialize]
         public static void SetUp(TestContext context)
         {
-            List<string> nameServerAddress = new List<string>();
-            nameServerAddress.Add(string.Format("{0}:{1}", host, port));
-            resolver = new StaticNameServerResolver(nameServerAddress);
-
             credentialsProvider = new ConfigFileCredentialsProvider();
+
         }
 
         [ClassCleanup]
@@ -66,10 +63,18 @@ namespace Org.Apache.Rocketmq
 
         }
 
+        [TestInitialize]
+        public void SetUp()
+        {
+            accessPoint = new AccessPoint();
+            accessPoint.Host = host;
+            accessPoint.Port = port;
+        }
+
         [TestMethod]
         public void testLifecycle()
         {
-            var consumer = new PushConsumer(resolver, resourceNamespace, group);
+            var consumer = new PushConsumer(accessPoint, resourceNamespace, group);
             consumer.CredentialsProvider = new ConfigFileCredentialsProvider();
             consumer.Region = "cn-hangzhou-pre";
             consumer.Subscribe(topic, "*", ExpressionType.TAG);
@@ -84,7 +89,7 @@ namespace Org.Apache.Rocketmq
         [TestMethod]
         public void testConsumeMessage()
         {
-            var consumer = new PushConsumer(resolver, resourceNamespace, group);
+            var consumer = new PushConsumer(accessPoint, resourceNamespace, group);
             consumer.CredentialsProvider = new ConfigFileCredentialsProvider();
             consumer.Region = "cn-hangzhou-pre";
             consumer.Subscribe(topic, "*", ExpressionType.TAG);
@@ -99,13 +104,13 @@ namespace Org.Apache.Rocketmq
 
         private static string topic = "cpp_sdk_standard";
 
-        private static string clientId = "C001";
         private static string group = "GID_cpp_sdk_standard";
 
-        private static INameServerResolver resolver;
         private static ICredentialsProvider credentialsProvider;
         private static string host = "116.62.231.199";
         private static int port = 80;
+
+        private AccessPoint accessPoint;
 
     }
 

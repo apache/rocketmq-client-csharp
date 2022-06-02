@@ -31,6 +31,7 @@ namespace Org.Apache.Rocketmq {
             this.client_type_ = rmq::ClientType.Unspecified;
             this.access_point_ = new rmq::Endpoints();
             this.back_off_policy_ = new rmq::RetryPolicy();
+            this._publishing = new Publishing();
         }
 
         public string region() {
@@ -141,13 +142,13 @@ namespace Org.Apache.Rocketmq {
 
         private rmq::Endpoints access_point_;
 
-        public rmq::AddressScheme AccessPointAddressScheme
+        public rmq::AddressScheme AccessPointScheme
         {
             get { return access_point_.Scheme; }
             set { access_point_.Scheme = value; }
         }
 
-        public List<rmq::Address> AccessPointAddresses
+        public List<rmq::Address> AccessPointEndpoints
         {
             get
             {
@@ -171,7 +172,11 @@ namespace Org.Apache.Rocketmq {
 
         private rmq::RetryPolicy back_off_policy_;
 
-
+        private Publishing _publishing;
+        public Publishing Publishing
+        {
+            get { return _publishing; }
+        }
 
     }
 

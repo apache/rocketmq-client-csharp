@@ -17,24 +17,27 @@
 
 using System;
 using System.Collections.Generic;
+using rmq = Apache.Rocketmq.V2;
 
 namespace Org.Apache.Rocketmq
 {
     public class TopicRouteData : IEquatable<TopicRouteData>
     {
-        public TopicRouteData(List<Partition> partitions)
+        public TopicRouteData(List<rmq::MessageQueue> partitions)
         {
-            Partitions = partitions;
-            Partitions.Sort();
+            _messageQueues = partitions;
+
+            _messageQueues.Sort(Utilities.CompareMessageQueue);
         }
 
-        public List<Partition> Partitions { get; }
+        private List<rmq::MessageQueue> _messageQueues;
+        public List<rmq::MessageQueue> MessageQueues { get { return _messageQueues; } }
 
         public bool Equals(TopicRouteData other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
-            return Equals(Partitions, other.Partitions);
+            return Equals(_messageQueues, other._messageQueues);
         }
 
         public override bool Equals(object obj)
@@ -47,7 +50,7 @@ namespace Org.Apache.Rocketmq
 
         public override int GetHashCode()
         {
-            return (Partitions != null ? Partitions.GetHashCode() : 0);
+            return (_messageQueues != null ? _messageQueues.GetHashCode() : 0);
         }
     }
 }

@@ -31,12 +31,18 @@ namespace Org.Apache.Rocketmq
     {
         protected static readonly Logger Logger = MqLogManager.Instance.GetCurrentClassLogger();
 
-        public Client(INameServerResolver resolver, string resourceNamespace)
+        public Client(AccessPoint accessPoint, string resourceNamespace)
         {
-            _nameServerResolver = resolver;
+            // Support IPv4 for now
+            AccessPointScheme = rmq::AddressScheme.Ipv4;
+
+            var serviceEndpoint = new rmq::Address();
+            serviceEndpoint.Host = accessPoint.Host;
+            serviceEndpoint.Port = accessPoint.Port;
+            AccessPointEndpoints = new List<rmq::Address> { serviceEndpoint };
+
             _resourceNamespace = resourceNamespace;
             Manager = ClientManagerFactory.getClientManager(resourceNamespace);
-            _nameServerResolverCts = new CancellationTokenSource();
 
             _topicRouteTable = new ConcurrentDictionary<string, TopicRouteData>();
             _updateTopicRouteCts = new CancellationTokenSource();
@@ -48,11 +54,6 @@ namespace Org.Apache.Rocketmq
         {
             schedule(async () =>
             {
-                await UpdateNameServerList();
-            }, 30, _nameServerResolverCts.Token);
-
-            schedule(async () =>
-            {
                 await UpdateTopicRoute();
 
             }, 30, _updateTopicRouteCts.Token);
@@ -62,7 +63,6 @@ namespace Org.Apache.Rocketmq
         {
             Logger.Info($"Shutdown client[resource-namespace={_resourceNamespace}");
             _updateTopicRouteCts.Cancel();
-            _nameServerResolverCts.Cancel();
             Manager.Shutdown().GetAwaiter().GetResult();
         }
 
@@ -70,9 +70,9 @@ namespace Org.Apache.Rocketmq
         {
             foreach (var item in _topicRouteTable)
             {
-                foreach (var partition in item.Value.Partitions)
+                foreach (var partition in item.Value.MessageQueues)
                 {
-                    string target = partition.Broker.TargetUrl();
+                    string target = Utilities.TargetUrl(partition);
                     if (acceptor(target))
                     {
                         return target;
@@ -90,9 +90,9 @@ namespace Org.Apache.Rocketmq
             List<string> endpoints = new List<string>();
             foreach (var item in _topicRouteTable)
             {
-                foreach (var partition in item.Value.Partitions)
+                foreach (var partition in item.Value.MessageQueues)
                 {
-                    string endpoint = partition.Broker.TargetUrl();
+                    string endpoint = Utilities.TargetUrl(partition);
                     if (!endpoints.Contains(endpoint))
                     {
                         endpoints.Add(endpoint);
@@ -102,47 +102,8 @@ namespace Org.Apache.Rocketmq
             return endpoints;
         }
 
-        private async Task UpdateNameServerList()
-        {
-            List<string> nameServers = await _nameServerResolver.resolveAsync();
-            if (0 == nameServers.Count)
-            {
-                // Whoops, something should be wrong. We got an empty name server list.
-                Logger.Warn("Got an empty name server list");
-                return;
-            }
-
-            if (nameServers.Equals(this._nameServers))
-            {
-                Logger.Debug("Name server list remains unchanged");
-                return;
-            }
-
-            // Name server list is updated. 
-            // TODO: Locking is required
-            this._nameServers = nameServers;
-            this._currentNameServerIndex = 0;
-        }
-
         private async Task UpdateTopicRoute()
         {
-            if (null == _nameServers || 0 == _nameServers.Count)
-            {
-                List<string> list = await _nameServerResolver.resolveAsync();
-                if (null != list && 0 != list.Count)
-                {
-                    this._nameServers = list;
-                }
-                else
-                {
-                    Logger.Error("Failed to resolve name server list");
-                    return;
-                }
-            }
-
-            // We got one or more name servers available.
-            string nameServer = _nameServers[_currentNameServerIndex];
-
             List<Task<TopicRouteData>> tasks = new List<Task<TopicRouteData>>();
             foreach (var item in _topicRouteTable)
             {
@@ -158,12 +119,12 @@ namespace Org.Apache.Rocketmq
                     continue;
                 }
 
-                if (0 == item.Partitions.Count)
+                if (0 == item.MessageQueues.Count)
                 {
                     continue;
                 }
 
-                var topicName = item.Partitions[0].Topic.Name;
+                var topicName = item.MessageQueues[0].Topic.Name;
                 var existing = _topicRouteTable[topicName];
                 if (!existing.Equals(item))
                 {
@@ -190,18 +151,6 @@ namespace Org.Apache.Rocketmq
             });
         }
 
-        protected rmq::Endpoints AccessEndpoint(string nameServer)
-        {
-            var endpoints = new rmq::Endpoints();
-            endpoints.Scheme = rmq::AddressScheme.Ipv4;
-            var address = new rmq::Address();
-            int pos = nameServer.LastIndexOf(':');
-            address.Host = nameServer.Substring(0, pos);
-            address.Port = Int32.Parse(nameServer.Substring(pos + 1));
-            endpoints.Addresses.Add(address);
-            return endpoints;
-        }
-
         /**
          * Parameters:
          * topic
@@ -216,59 +165,44 @@ namespace Org.Apache.Rocketmq
                 return _topicRouteTable[topic];
             }
 
-            if (null == _nameServers || 0 == _nameServers.Count)
+            // We got one or more name servers available.
+            var request = new rmq::QueryRouteRequest();
+            request.Topic = new rmq::Resource();
+            request.Topic.ResourceNamespace = _resourceNamespace;
+            request.Topic.Name = topic;
+            request.Endpoints = new rmq::Endpoints();
+            request.Endpoints.Scheme = AccessPointScheme;
+            foreach (var address in AccessPointEndpoints)
             {
-                List<string> list = await _nameServerResolver.resolveAsync();
-                if (null != list && 0 != list.Count)
+                request.Endpoints.Addresses.Add(address);
+            }
+
+            var metadata = new grpc.Metadata();
+            Signature.sign(this, metadata);
+            int index = random.Next(0, AccessPointEndpoints.Count);
+            var serviceEndpoint = AccessPointEndpoints[index];
+            // AccessPointAddresses.Count
+            string target = $"https://{serviceEndpoint.Host}:{serviceEndpoint.Port}";
+            TopicRouteData topicRouteData;
+            try
+            {
+                topicRouteData = await Manager.ResolveRoute(target, metadata, request, RequestTimeout);
+                if (null != topicRouteData)
                 {
-                    this._nameServers = list;
+                    Logger.Debug($"Got route entries for {topic} from name server");
+                    _topicRouteTable.TryAdd(topic, topicRouteData);
+                    return topicRouteData;
                 }
                 else
                 {
-                    Logger.Error("Name server is not properly configured. List is null or empty");
-                    return null;
+                    Logger.Warn($"Failed to query route of {topic} from {target}");
                 }
             }
-
-
-            for (int retry = 0; retry < MaxTransparentRetry; retry++)
+            catch (System.Exception e)
             {
-                // We got one or more name servers available.
-                int index = (_currentNameServerIndex + retry) % _nameServers.Count;
-                string nameServer = _nameServers[index];
-                var request = new rmq::QueryRouteRequest();
-                request.Topic = new rmq::Resource();
-                request.Topic.ResourceNamespace = _resourceNamespace;
-                request.Topic.Name = topic;
-                request.Endpoints = AccessEndpoint(nameServer);
-                var metadata = new grpc.Metadata();
-                Signature.sign(this, metadata);
-                string target = $"https://{nameServer}";
-                TopicRouteData topicRouteData;
-                try
-                {
-                    topicRouteData = await Manager.ResolveRoute(target, metadata, request, RequestTimeout);
-                    if (null != topicRouteData)
-                    {
-                        Logger.Debug($"Got route entries for {topic} from name server");
-                        _topicRouteTable.TryAdd(topic, topicRouteData);
-
-                        if (retry > 0)
-                        {
-                            _currentNameServerIndex = index;
-                        }
-                        return topicRouteData;
-                    }
-                    else
-                    {
-                        Logger.Warn($"Failed to query route of {topic} from {target}");
-                    }
-                }
-                catch (System.Exception e)
-                {
-                    Logger.Warn(e, "Failed when querying route");
-                }
+                Logger.Warn(e, "Failed when querying route");
             }
+
             return null;
         }
 
@@ -320,7 +254,12 @@ namespace Org.Apache.Rocketmq
             request.Group = new rmq::Resource();
             request.Group.ResourceNamespace = _resourceNamespace;
             request.Group.Name = group;
-            request.Endpoints = AccessEndpoint(_nameServers[_currentNameServerIndex]);
+            request.Endpoints = new rmq::Endpoints();
+            request.Endpoints.Scheme = AccessPointScheme;
+            foreach (var endpoint in AccessPointEndpoints)
+            {
+                request.Endpoints.Addresses.Add(endpoint);
+            }
             try
             {
                 var metadata = new grpc::Metadata();
@@ -342,6 +281,23 @@ namespace Org.Apache.Rocketmq
             // TODO: use the first address for now. 
             var address = addresses[0];
             return $"https://{address.Host}:{address.Port}";
+        }
+
+        public void buildClientSetting(rmq::Settings settings)
+        {
+
+        }
+
+        public void createSession(string url)
+        {
+            var metadata = new grpc::Metadata();
+            Signature.sign(this, metadata);
+            var stream = Manager.Telemetry(url, metadata);
+            var session = new Session(url, stream, this);
+            Task.Run(async () =>
+            {
+                await session.Loop();
+            });
         }
 
 
@@ -427,17 +383,11 @@ namespace Org.Apache.Rocketmq
         }
 
         protected readonly IClientManager Manager;
-        
-        private readonly INameServerResolver _nameServerResolver;
-        private readonly CancellationTokenSource _nameServerResolverCts;
-        private List<string> _nameServers;
-        private int _currentNameServerIndex;
 
         private readonly ConcurrentDictionary<string, TopicRouteData> _topicRouteTable;
         private readonly CancellationTokenSource _updateTopicRouteCts;
 
         private readonly CancellationTokenSource _healthCheckCts;
-
-        protected const int MaxTransparentRetry = 3;
+        private Random random = new Random();
     }
 }

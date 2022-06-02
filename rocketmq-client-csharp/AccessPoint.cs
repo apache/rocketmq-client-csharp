@@ -14,14 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
 namespace Org.Apache.Rocketmq
 {
-    public interface INameServerResolver
+    public class AccessPoint
     {
-        Task<List<string>> resolveAsync();
+        private string _host;
+
+        public string Host
+        {
+            get { return _host; }
+            set { _host = value; }
+        }
+
+        private int _port;
+
+        public int Port
+        {
+            get { return _port; }
+            set { _port = value; }
+        }
     }
 }

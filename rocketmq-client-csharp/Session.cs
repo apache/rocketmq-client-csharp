@@ -14,10 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-using System;
-using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using grpc = global::Grpc.Core;
-using System.Security.Cryptography;
+using NLog;
+
+
+using rmq = Apache.Rocketmq.V2;
 
 namespace Org.Apache.Rocketmq
 {
@@ -25,9 +28,73 @@ namespace Org.Apache.Rocketmq
     class Session
     {
 
-        public string Target { get; }
+        private static readonly Logger Logger = MqLogManager.Instance.GetCurrentClassLogger();
 
+        public Session(string target,
+                       grpc::AsyncDuplexStreamingCall<rmq::TelemetryCommand, rmq::TelemetryCommand> stream,
+                       IClient client)
+        {
+            this._target = target;
+            this._stream = stream;
+        }
 
+        public async Task Loop()
+        {
+            var reader = this._stream.ResponseStream;
+            var writer = this._stream.RequestStream;
+            var request = new rmq::TelemetryCommand();
+            request.Settings = new rmq::Settings();
+            _client.buildClientSetting(request.Settings);
+            await writer.WriteAsync(request);
+            while (!_cts.IsCancellationRequested)
+            {
+                if (await reader.MoveNext(_cts.Token))
+                {
+                    var cmd = reader.Current;
+                    switch (cmd.CommandCase)
+                    {
+                        case rmq::TelemetryCommand.CommandOneofCase.None:
+                            {
+                                Logger.Warn($"Telemetry failed: {cmd.Status.ToString()}");
+                                break;
+                            }
+                        case rmq::TelemetryCommand.CommandOneofCase.Settings:
+                            {
+
+                                break;
+                            }
+                        case rmq::TelemetryCommand.CommandOneofCase.PrintThreadStackTraceCommand:
+                            {
+                                break;
+                            }
+                        case rmq::TelemetryCommand.CommandOneofCase.RecoverOrphanedTransactionCommand:
+                            {
+                                break;
+                            }
+                        case rmq::TelemetryCommand.CommandOneofCase.VerifyMessageCommand:
+                            {
+                                break;
+                            }
+                    }
+                }
+            }
+        }
+
+        public void Cancel()
+        {
+            _cts.Cancel();
+        }
+
+        private string _target;
+        public string Target { get { return _target; } }
+        private grpc::AsyncDuplexStreamingCall<rmq::TelemetryCommand, rmq::TelemetryCommand> _stream;
+        private IClient _client;
+
+        private CancellationTokenSource _cts = new CancellationTokenSource();
+        public CancellationTokenSource CTS
+        {
+            get { return _cts; }
+        }
     };
 
 }

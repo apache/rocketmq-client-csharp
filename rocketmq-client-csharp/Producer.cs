@@ -28,7 +28,7 @@ namespace Org.Apache.Rocketmq
 {
     public class Producer : Client, IProducer
     {
-        public Producer(INameServerResolver resolver, string resourceNamespace) : base(resolver, resourceNamespace)
+        public Producer(AccessPoint accessPoint, string resourceNamespace) : base(accessPoint, resourceNamespace)
         {
             this.loadBalancer = new ConcurrentDictionary<string, PublishLoadBalancer>();
         }
@@ -55,9 +55,9 @@ namespace Org.Apache.Rocketmq
             if (!loadBalancer.ContainsKey(message.Topic))
             {
                 var topicRouteData = await GetRouteFor(message.Topic, false);
-                if (null == topicRouteData || null == topicRouteData.Partitions || 0 == topicRouteData.Partitions.Count)
+                if (null == topicRouteData || null == topicRouteData.MessageQueues || 0 == topicRouteData.MessageQueues.Count)
                 {
-                    Logger.Error($"Failed to resolve route info for {message.Topic} after {MaxTransparentRetry} attempts");
+                    Logger.Error($"Failed to resolve route info for {message.Topic}");
                     throw new TopicRouteException(string.Format("No topic route for {0}", message.Topic));
                 }
 
@@ -98,10 +98,10 @@ namespace Org.Apache.Rocketmq
 
             // string target = "https://";
             List<string> targets = new List<string>();
-            List<Partition> candidates = publishLB.select(message.MaxAttemptTimes);
-            foreach (var partition in candidates)
+            List<rmq::MessageQueue> candidates = publishLB.select(message.MaxAttemptTimes);
+            foreach (var messageQueue in candidates)
             {
-                targets.Add(partition.Broker.TargetUrl());
+                targets.Add(Utilities.TargetUrl(messageQueue));
             }
 
             var metadata = new Metadata();

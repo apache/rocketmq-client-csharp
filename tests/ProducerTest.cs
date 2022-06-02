@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Collections.Generic;
 using System;
+using System.Threading.Tasks;
 
 namespace Org.Apache.Rocketmq
 {
@@ -28,10 +28,6 @@ namespace Org.Apache.Rocketmq
         [ClassInitialize]
         public static void SetUp(TestContext context)
         {
-            List<string> nameServerAddress = new List<string>();
-            nameServerAddress.Add(string.Format("{0}:{1}", host, port));
-            resolver = new StaticNameServerResolver(nameServerAddress);
-
             credentialsProvider = new ConfigFileCredentialsProvider();
         }
 
@@ -41,33 +37,31 @@ namespace Org.Apache.Rocketmq
 
         }
 
-
         [TestMethod]
-        public void testSendMessage()
+        public async Task testSendMessage()
         {
-            var producer = new Producer(resolver, resourceNamespace);
+            var accessPoint = new AccessPoint();
+            accessPoint.Host = host;
+            accessPoint.Port = port;
+            var producer = new Producer(accessPoint, resourceNamespace);
             producer.CredentialsProvider = new ConfigFileCredentialsProvider();
             producer.Region = "cn-hangzhou-pre";
             producer.Start();
             byte[] body = new byte[1024];
             Array.Fill(body, (byte)'x');
             var msg = new Message(topic, body);
-            var sendResult = producer.Send(msg).GetAwaiter().GetResult();
+            var sendResult = await producer.Send(msg);
             Assert.IsNotNull(sendResult);
             producer.Shutdown();
         }
 
-        private static string resourceNamespace = "MQ_INST_1080056302921134_BXuIbML7";
+        private static string resourceNamespace = "";
 
         private static string topic = "cpp_sdk_standard";
 
-        private static string clientId = "C001";
-        private static string group = "GID_cpp_sdk_standard";
-
-        private static INameServerResolver resolver;
         private static ICredentialsProvider credentialsProvider;
-        private static string host = "116.62.231.199";
-        private static int port = 80;
+        private static string host = "11.166.42.94";
+        private static int port = 8081;
     }
 
 }

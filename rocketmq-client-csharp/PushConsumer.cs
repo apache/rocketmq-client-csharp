@@ -24,7 +24,7 @@ namespace Org.Apache.Rocketmq
 {
     public class PushConsumer : Client, IConsumer
     {
-        public PushConsumer(INameServerResolver resolver, string resourceNamespace, string group) : base(resolver, resourceNamespace)
+        public PushConsumer(AccessPoint accessPoint, string resourceNamespace, string group) : base(accessPoint, resourceNamespace)
         {
             _group = group;
             _topicFilterExpressionMap = new ConcurrentDictionary<string, FilterExpression>();

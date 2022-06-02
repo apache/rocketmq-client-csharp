@@ -17,6 +17,7 @@
 
 using System.Threading.Tasks;
 using System;
+using rmq = Apache.Rocketmq.V2;
 
 namespace Org.Apache.Rocketmq
 {
@@ -27,5 +28,6 @@ namespace Org.Apache.Rocketmq
 
         Task<bool> NotifyClientTermination();
 
+        void buildClientSetting(rmq::Settings settings);
     }
 }

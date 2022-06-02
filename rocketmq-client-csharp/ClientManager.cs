@@ -74,6 +74,12 @@ namespace Org.Apache.Rocketmq
             }
         }
 
+        public grpc::AsyncDuplexStreamingCall<rmq::TelemetryCommand, rmq::TelemetryCommand> Telemetry(string target, grpc::Metadata metadata)
+        {
+            var rpcClient = GetRpcClient(target);
+            return rpcClient.Telemetry(metadata);
+        }
+
         public async Task<TopicRouteData> ResolveRoute(string target, grpc::Metadata metadata,
             rmq::QueryRouteRequest request, TimeSpan timeout)
         {
@@ -82,72 +88,16 @@ namespace Org.Apache.Rocketmq
 
             if (queryRouteResponse.Status.Code != rmq::Code.Ok)
             {
+                Logger.Warn($"Failed to query route entries for topic={request.Topic.Name} from {target}: {queryRouteResponse.Status.ToString()}");
                 // Raise an application layer exception
             }
 
-            var partitions = new List<Partition>();
-            // Translate protobuf object to domain specific one
-            foreach (var partition in queryRouteResponse.MessageQueues)
+            var messageQueues = new List<rmq::MessageQueue>();
+            foreach (var messageQueue in queryRouteResponse.MessageQueues)
             {
-                var topic = new Topic(partition.Topic.ResourceNamespace, partition.Topic.Name);
-                var id = partition.Id;
-                Permission permission = Permission.ReadWrite;
-                switch (partition.Permission)
-                {
-                    case rmq::Permission.None:
-                    {
-                        permission = Permission.None;
-                        break;
-                    }
-                    case rmq::Permission.Read:
-                    {
-                        permission = Permission.Read;
-                        break;
-                    }
-                    case rmq::Permission.Write:
-                    {
-                        permission = Permission.Write;
-                        break;
-                    }
-                    case rmq::Permission.ReadWrite:
-                    {
-                        permission = Permission.ReadWrite;
-                        break;
-                    }
-                }
-
-                AddressScheme scheme = AddressScheme.Ipv4;
-                switch (partition.Broker.Endpoints.Scheme)
-                {
-                    case rmq::AddressScheme.Ipv4:
-                    {
-                        scheme = AddressScheme.Ipv4;
-                        break;
-                    }
-                    case rmq::AddressScheme.Ipv6:
-                    {
-                        scheme = AddressScheme.Ipv6;
-                        break;
-                    }
-                    case rmq::AddressScheme.DomainName:
-                    {
-                        scheme = AddressScheme.DomainName;
-                        break;
-                    }
-                }
-
-                List<Address> addresses = new List<Address>();
-                foreach (var item in partition.Broker.Endpoints.Addresses)
-                {
-                    addresses.Add(new Address(item.Host, item.Port));
-                }
-
-                ServiceAddress serviceAddress = new ServiceAddress(scheme, addresses);
-                Broker broker = new Broker(partition.Broker.Name, id, serviceAddress);
-                partitions.Add(new Partition(topic, broker, id, permission));
+                messageQueues.Add(messageQueue);
             }
-
-            var topicRouteData = new TopicRouteData(partitions);
+            var topicRouteData = new TopicRouteData(messageQueues);
             return topicRouteData;
         }
 
