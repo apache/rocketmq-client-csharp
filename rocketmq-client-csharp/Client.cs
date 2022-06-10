@@ -31,7 +31,7 @@ namespace Org.Apache.Rocketmq
     {
         protected static readonly Logger Logger = MqLogManager.Instance.GetCurrentClassLogger();
 
-        public Client(AccessPoint accessPoint, string resourceNamespace)
+        protected Client(AccessPoint accessPoint, string resourceNamespace)
         {
             // Support IPv4 for now
             AccessPointScheme = rmq::AddressScheme.Ipv4;
@@ -198,7 +198,7 @@ namespace Org.Apache.Rocketmq
                     Logger.Warn($"Failed to query route of {topic} from {target}");
                 }
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
                 Logger.Warn(e, "Failed when querying route");
             }
@@ -206,7 +206,7 @@ namespace Org.Apache.Rocketmq
             return null;
         }
 
-        public abstract void PrepareHeartbeatData(rmq::HeartbeatRequest request);
+        protected abstract void PrepareHeartbeatData(rmq::HeartbeatRequest request);
 
         public async Task Heartbeat()
         {
@@ -243,7 +243,7 @@ namespace Org.Apache.Rocketmq
 
         }
 
-        public async Task<List<rmq::Assignment>> scanLoadAssignment(string topic, string group)
+        protected async Task<List<rmq::Assignment>> scanLoadAssignment(string topic, string group)
         {
             // Pick a broker randomly
             string target = FilterBroker((s) => true);

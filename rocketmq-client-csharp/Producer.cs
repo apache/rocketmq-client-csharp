@@ -45,12 +45,12 @@ namespace Org.Apache.Rocketmq
             base.Shutdown();
         }
 
-        public override void PrepareHeartbeatData(rmq::HeartbeatRequest request)
+        protected override void PrepareHeartbeatData(rmq::HeartbeatRequest request)
         {
 
         }
 
-        public async Task<SendResult> Send(Message message)
+        public async Task<SendReceipt> Send(Message message)
         {
             if (!loadBalancer.ContainsKey(message.Topic))
             {
@@ -118,7 +118,7 @@ namespace Org.Apache.Rocketmq
                     {
 
                         var messageId = response.Entries[0].MessageId;
-                        return new SendResult(messageId);
+                        return new SendReceipt(messageId);
                     }
                 }
                 catch (Exception e)

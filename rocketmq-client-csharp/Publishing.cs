@@ -14,8 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-using rmq = Apache.Rocketmq.V2;
 
+using rmq = Apache.Rocketmq.V2;
 using System.Collections.Generic;
 
 namespace Org.Apache.Rocketmq
@@ -23,28 +23,9 @@ namespace Org.Apache.Rocketmq
     // Settings for publishing
     public class Publishing
     {
-        private List<rmq::Resource> _topics;
-        public List<rmq::Resource> Topics
-        {
-            get { return _topics; }
-            set { _topics = value; }
-        }
+        public List<rmq::Resource> Topics { get; set; }
+        public int CompressBodyThreshold { get; set; }
 
-        private int _compressBodyThreshold;
-        public int CompressBodyThreshold
-        {
-            get { return _compressBodyThreshold; }
-            set { _compressBodyThreshold = value; }
-        }
-
-        private int _maxBodySize;
-        public int MaxBodySize
-        {
-            get { return _maxBodySize; }
-            set { _maxBodySize = value; }
-        }
-
+        public int MaxBodySize { get; set; }
     }
-
-
 }

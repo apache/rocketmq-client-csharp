@@ -14,30 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 namespace Org.Apache.Rocketmq
 {
     public class FilterExpression
     {
-
         public FilterExpression(string expression, ExpressionType type)
         {
-            _expression = expression;
-            _type = type;
+            Expression = expression;
+            Type = type;
         }
 
-        private ExpressionType _type;
-
-        private string _expression;
-
-        public ExpressionType Type
-        {
-            get { return _type; }
-        }
-
-        public string Expression
-        {
-            get { return _expression; }
-        }
-
+        public ExpressionType Type { get; }
+        public string Expression { get; }
     }
 }
