@@ -25,7 +25,7 @@ namespace Org.Apache.Rocketmq {
         [TestMethod]
         public void testCtor() {
             string messageId = new string("abc");
-            var sendResult = new SendResult(messageId);
+            var sendResult = new SendReceipt(messageId);
             Assert.AreEqual(messageId, sendResult.MessageId);
             Assert.AreEqual(SendStatus.SEND_OK, sendResult.Status);
         }
@@ -34,7 +34,7 @@ namespace Org.Apache.Rocketmq {
         [TestMethod]
         public void testCtor2() {
             string messageId = new string("abc");
-            var sendResult = new SendResult(messageId, SendStatus.FLUSH_DISK_TIMEOUT);
+            var sendResult = new SendReceipt(messageId, SendStatus.FLUSH_DISK_TIMEOUT);
             Assert.AreEqual(messageId, sendResult.MessageId);
             Assert.AreEqual(SendStatus.FLUSH_DISK_TIMEOUT, sendResult.Status);
         }

@@ -224,7 +224,7 @@ namespace Org.Apache.Rocketmq
             }
         }
 
-        public override void PrepareHeartbeatData(rmq::HeartbeatRequest request)
+        protected override void PrepareHeartbeatData(rmq::HeartbeatRequest request)
         {
         }
 

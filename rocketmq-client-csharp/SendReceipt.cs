@@ -15,27 +15,34 @@
  * limitations under the License.
  */
 
-namespace Org.Apache.Rocketmq {
-    public sealed class SendResult {
-        public SendResult(string messageId) {
+namespace Org.Apache.Rocketmq
+{
+    public sealed class SendReceipt
+    {
+        public SendReceipt(string messageId)
+        {
             status_ = SendStatus.SEND_OK;
             messageId_ = messageId;
         }
 
-        public SendResult(string messageId, SendStatus status) {
+        public SendReceipt(string messageId, SendStatus status)
+        {
             status_ = status;
             messageId_ = messageId;
         }
 
         private string messageId_;
 
-        public string MessageId {
+        public string MessageId
+        {
             get { return messageId_; }
         }
 
 
         private SendStatus status_;
-        public SendStatus Status {
+
+        public SendStatus Status
+        {
             get { return status_; }
         }
     }

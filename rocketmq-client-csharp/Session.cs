@@ -14,25 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 using System.Threading;
 using System.Threading.Tasks;
 using grpc = global::Grpc.Core;
 using NLog;
-
-
 using rmq = Apache.Rocketmq.V2;
 
 namespace Org.Apache.Rocketmq
 {
-
     class Session
     {
-
         private static readonly Logger Logger = MqLogManager.Instance.GetCurrentClassLogger();
 
         public Session(string target,
-                       grpc::AsyncDuplexStreamingCall<rmq::TelemetryCommand, rmq::TelemetryCommand> stream,
-                       IClient client)
+            grpc::AsyncDuplexStreamingCall<rmq::TelemetryCommand, rmq::TelemetryCommand> stream,
+            IClient client)
         {
             this._target = target;
             this._stream = stream;
@@ -54,27 +51,26 @@ namespace Org.Apache.Rocketmq
                     switch (cmd.CommandCase)
                     {
                         case rmq::TelemetryCommand.CommandOneofCase.None:
-                            {
-                                Logger.Warn($"Telemetry failed: {cmd.Status.ToString()}");
-                                break;
-                            }
+                        {
+                            Logger.Warn($"Telemetry failed: {cmd.Status}");
+                            break;
+                        }
                         case rmq::TelemetryCommand.CommandOneofCase.Settings:
-                            {
-
-                                break;
-                            }
+                        {
+                            break;
+                        }
                         case rmq::TelemetryCommand.CommandOneofCase.PrintThreadStackTraceCommand:
-                            {
-                                break;
-                            }
+                        {
+                            break;
+                        }
                         case rmq::TelemetryCommand.CommandOneofCase.RecoverOrphanedTransactionCommand:
-                            {
-                                break;
-                            }
+                        {
+                            break;
+                        }
                         case rmq::TelemetryCommand.CommandOneofCase.VerifyMessageCommand:
-                            {
-                                break;
-                            }
+                        {
+                            break;
+                        }
                     }
                 }
             }
@@ -86,15 +82,20 @@ namespace Org.Apache.Rocketmq
         }
 
         private string _target;
-        public string Target { get { return _target; } }
+
+        public string Target
+        {
+            get { return _target; }
+        }
+
         private grpc::AsyncDuplexStreamingCall<rmq::TelemetryCommand, rmq::TelemetryCommand> _stream;
         private IClient _client;
 
         private CancellationTokenSource _cts = new CancellationTokenSource();
+
         public CancellationTokenSource CTS
         {
             get { return _cts; }
         }
     };
-
 }
