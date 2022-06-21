@@ -14,37 +14,36 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using grpc = global::Grpc.Core;
-using Moq;
-using System;
+using rmq = Apache.Rocketmq.V2;
 
 namespace Org.Apache.Rocketmq
 {
 
     [TestClass]
-    public class SignatureTest
+    public class SimpleConsumerTest
     {
 
         [TestMethod]
-        public void testSign()
+        public void TestStart()
         {
-            var mock = new Mock<IClientConfig>();
-            mock.Setup(x => x.getGroupName()).Returns("G1");
-            mock.Setup(x => x.tenantId()).Returns("Tenant-id");
-            mock.Setup(x => x.resourceNamespace()).Returns("mq:arn:test:");
-            mock.Setup(x => x.serviceName()).Returns("mq");
-            mock.Setup(x => x.region()).Returns("cn-hangzhou");
+            var accessPoint = new AccessPoint();
+            var host = "11.166.42.94";
+            var port = 8081;
+            accessPoint.Host = host;
+            accessPoint.Port = port;
+            var resourceNamespace = "";
+            var group = "GID_cpp_sdk_standard";
+            var topic = "cpp_sdk_standard";
 
-            string accessKey = "key";
-            string accessSecret = "secret";
-            var credentialsProvider = new StaticCredentialsProvider(accessKey, accessSecret);
-            mock.Setup(x => x.credentialsProvider()).Returns(credentialsProvider);
-
-            var metadata = new grpc::Metadata();
-            Signature.sign(mock.Object, metadata);
-            Assert.IsNotNull(metadata.Get(MetadataConstants.AUTHORIZATION));
+            var simpleConsumer = new SimpleConsumer(accessPoint, resourceNamespace, group);
+            simpleConsumer.Subscribe(topic, rmq::FilterType.Tag, "*");
+            simpleConsumer.Start();
+            Thread.Sleep(10_000);
         }
+
     }
+
 
 }

@@ -125,7 +125,8 @@ namespace Org.Apache.Rocketmq
             var callOptions = new CallOptions(metadata, deadline);
             var call = _stub.ReceiveMessage(request, callOptions);
             var result = new List<rmq::ReceiveMessageResponse>();
-            while(await call.ResponseStream.MoveNext()) {
+            while (await call.ResponseStream.MoveNext())
+            {
                 result.Add(call.ResponseStream.Current);
             }
             return result;

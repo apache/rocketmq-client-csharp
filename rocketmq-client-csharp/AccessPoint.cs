@@ -33,5 +33,10 @@ namespace Org.Apache.Rocketmq
             get { return _port; }
             set { _port = value; }
         }
+
+        public string TargetUrl()
+        {
+            return $"https://{_host}:{_port}";
+        }
     }
 }

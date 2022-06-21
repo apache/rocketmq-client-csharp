@@ -33,15 +33,31 @@ namespace Org.Apache.Rocketmq
 
         protected Client(AccessPoint accessPoint, string resourceNamespace)
         {
+            _accessPoint = accessPoint;
+
             // Support IPv4 for now
             AccessPointScheme = rmq::AddressScheme.Ipv4;
-
             var serviceEndpoint = new rmq::Address();
             serviceEndpoint.Host = accessPoint.Host;
             serviceEndpoint.Port = accessPoint.Port;
             AccessPointEndpoints = new List<rmq::Address> { serviceEndpoint };
 
             _resourceNamespace = resourceNamespace;
+
+            _clientSettings = new rmq::Settings();
+
+            _clientSettings.AccessPoint = new rmq::Endpoints();
+            _clientSettings.AccessPoint.Scheme = rmq::AddressScheme.Ipv4;
+            _clientSettings.AccessPoint.Addresses.Add(serviceEndpoint);
+
+            _clientSettings.RequestTimeout = Google.Protobuf.WellKnownTypes.Duration.FromTimeSpan(TimeSpan.FromSeconds(3));
+
+            _clientSettings.UserAgent = new rmq.UA();
+            _clientSettings.UserAgent.Language = rmq::Language.DotNet;
+            _clientSettings.UserAgent.Version = "5.0.0";
+            _clientSettings.UserAgent.Platform = Environment.OSVersion.ToString();
+            _clientSettings.UserAgent.Hostname = System.Net.Dns.GetHostName();
+
             Manager = ClientManagerFactory.getClientManager(resourceNamespace);
 
             _topicRouteTable = new ConcurrentDictionary<string, TopicRouteData>();
@@ -283,9 +299,9 @@ namespace Org.Apache.Rocketmq
             return $"https://{address.Host}:{address.Port}";
         }
 
-        public void buildClientSetting(rmq::Settings settings)
+        public virtual void BuildClientSetting(rmq::Settings settings)
         {
-
+            settings.MergeFrom(_clientSettings);
         }
 
         public void createSession(string url)
@@ -388,6 +404,12 @@ namespace Org.Apache.Rocketmq
         private readonly CancellationTokenSource _updateTopicRouteCts;
 
         private readonly CancellationTokenSource _healthCheckCts;
+
+        protected readonly AccessPoint _accessPoint;
+
+        // This field is subject changes from servers.
+        protected rmq::Settings _clientSettings;
+
         private Random random = new Random();
     }
 }

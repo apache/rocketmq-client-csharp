@@ -22,8 +22,10 @@ using grpc = global::Grpc.Core;
 using rmq = Apache.Rocketmq.V2;
 
 
-namespace Org.Apache.Rocketmq {
-    public interface IClientManager {
+namespace Org.Apache.Rocketmq
+{
+    public interface IClientManager
+    {
         IRpcClient GetRpcClient(string target);
 
         grpc::AsyncDuplexStreamingCall<rmq::TelemetryCommand, rmq::TelemetryCommand> Telemetry(string target, grpc::Metadata metadata);

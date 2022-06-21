@@ -17,13 +17,16 @@
 
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Org.Apache.Rocketmq {
+namespace Org.Apache.Rocketmq
+{
 
     [TestClass]
-    public class SendResultTest {
+    public class SendResultTest
+    {
 
         [TestMethod]
-        public void testCtor() {
+        public void testCtor()
+        {
             string messageId = new string("abc");
             var sendResult = new SendReceipt(messageId);
             Assert.AreEqual(messageId, sendResult.MessageId);
@@ -32,7 +35,8 @@ namespace Org.Apache.Rocketmq {
 
 
         [TestMethod]
-        public void testCtor2() {
+        public void testCtor2()
+        {
             string messageId = new string("abc");
             var sendResult = new SendReceipt(messageId, SendStatus.FLUSH_DISK_TIMEOUT);
             Assert.AreEqual(messageId, sendResult.MessageId);
@@ -40,5 +44,5 @@ namespace Org.Apache.Rocketmq {
         }
 
     }
-    
+
 }

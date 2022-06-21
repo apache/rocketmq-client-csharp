@@ -139,6 +139,6 @@ namespace Org.Apache.Rocketmq
         }
 
         private ConcurrentDictionary<string, PublishLoadBalancer> loadBalancer;
-        private static readonly Logger Logger = MqLogManager.Instance.GetCurrentClassLogger();
+        private static new readonly Logger Logger = MqLogManager.Instance.GetCurrentClassLogger();
     }
 }

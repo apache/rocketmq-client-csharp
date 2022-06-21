@@ -16,36 +16,38 @@ namespace tests
         public void TestMethod1()
         {
             rmq::Permission perm = rmq::Permission.None;
-            switch(perm) {
+            switch (perm)
+            {
                 case rmq::Permission.None:
-                {
-                    Console.WriteLine("None");
-                    break;
-                }
+                    {
+                        Console.WriteLine("None");
+                        break;
+                    }
 
                 case rmq::Permission.Read:
-                {
-                    Console.WriteLine("Read");
-                    break;
-                }
+                    {
+                        Console.WriteLine("Read");
+                        break;
+                    }
 
                 case rmq::Permission.Write:
-                {
-                    Console.WriteLine("Write");
-                    break;
-                }
+                    {
+                        Console.WriteLine("Write");
+                        break;
+                    }
 
                 case rmq::Permission.ReadWrite:
-                {
-                    Console.WriteLine("ReadWrite");
-                    break;
-                }
+                    {
+                        Console.WriteLine("ReadWrite");
+                        break;
+                    }
 
             }
         }
 
         [TestMethod]
-        public void TestRpcClientImplCtor() {
+        public void TestRpcClientImplCtor()
+        {
             RpcClient impl = new RpcClient("https://localhost:5001");
         }
 

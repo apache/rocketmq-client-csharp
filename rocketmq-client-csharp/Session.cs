@@ -33,6 +33,7 @@ namespace Org.Apache.Rocketmq
         {
             this._target = target;
             this._stream = stream;
+            this._client = client;
         }
 
         public async Task Loop()
@@ -41,36 +42,40 @@ namespace Org.Apache.Rocketmq
             var writer = this._stream.RequestStream;
             var request = new rmq::TelemetryCommand();
             request.Settings = new rmq::Settings();
-            _client.buildClientSetting(request.Settings);
+            _client.BuildClientSetting(request.Settings);
             await writer.WriteAsync(request);
+            Logger.Debug($"Writing Client Settings Done: {request.Settings.ToString()}");
             while (!_cts.IsCancellationRequested)
             {
                 if (await reader.MoveNext(_cts.Token))
                 {
                     var cmd = reader.Current;
+                    Logger.Debug($"Received a TelemetryCommand: {cmd.ToString()}");
                     switch (cmd.CommandCase)
                     {
                         case rmq::TelemetryCommand.CommandOneofCase.None:
-                        {
-                            Logger.Warn($"Telemetry failed: {cmd.Status}");
-                            break;
-                        }
+                            {
+                                Logger.Warn($"Telemetry failed: {cmd.Status}");
+                                break;
+                            }
                         case rmq::TelemetryCommand.CommandOneofCase.Settings:
-                        {
-                            break;
-                        }
+                            {
+
+                                Logger.Info($"Received settings from server {cmd.Settings.ToString()}");
+                                break;
+                            }
                         case rmq::TelemetryCommand.CommandOneofCase.PrintThreadStackTraceCommand:
-                        {
-                            break;
-                        }
+                            {
+                                break;
+                            }
                         case rmq::TelemetryCommand.CommandOneofCase.RecoverOrphanedTransactionCommand:
-                        {
-                            break;
-                        }
+                            {
+                                break;
+                            }
                         case rmq::TelemetryCommand.CommandOneofCase.VerifyMessageCommand:
-                        {
-                            break;
-                        }
+                            {
+                                break;
+                            }
                     }
                 }
             }

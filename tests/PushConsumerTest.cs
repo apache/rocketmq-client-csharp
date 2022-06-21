@@ -24,26 +24,28 @@ namespace Org.Apache.Rocketmq
 
     public class TestMessageListener : IMessageListener
     {
-        public async Task Consume(List<Message> messages, List<Message> failed)
+        public Task Consume(List<Message> messages, List<Message> failed)
         {
             foreach (var message in messages)
             {
                 Console.WriteLine("");
             }
-        }
 
+            return Task.CompletedTask;
+        }
     }
 
     public class CountableMessageListener : IMessageListener
     {
-        public async Task Consume(List<Message> messages, List<Message> failed)
+        public Task Consume(List<Message> messages, List<Message> failed)
         {
             foreach (var message in messages)
             {
                 Console.WriteLine("{}", message.MessageId);
             }
-        }
 
+            return Task.CompletedTask;
+        }
     }
 
     [TestClass]

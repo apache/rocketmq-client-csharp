@@ -201,7 +201,7 @@ namespace Org.Apache.Rocketmq
                         }
                     }
                 }
-                catch (System.Exception e)
+                catch (System.Exception)
                 {
                     // TODO: log exception raised.
                 }

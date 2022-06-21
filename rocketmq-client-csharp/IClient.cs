@@ -28,6 +28,8 @@ namespace Org.Apache.Rocketmq
 
         Task<bool> NotifyClientTermination();
 
-        void buildClientSetting(rmq::Settings settings);
+        void BuildClientSetting(rmq::Settings settings);
+
+
     }
 }

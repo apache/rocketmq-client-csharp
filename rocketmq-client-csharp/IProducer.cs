@@ -17,8 +17,10 @@
 
 using System.Threading.Tasks;
 
-namespace Org.Apache.Rocketmq {
-    public interface IProducer {
+namespace Org.Apache.Rocketmq
+{
+    public interface IProducer
+    {
         void Start();
 
         void Shutdown();

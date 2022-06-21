@@ -19,16 +19,20 @@ using System.Collections.Generic;
 namespace Org.Apache.Rocketmq
 {
 
-    public class Message {
-        public Message() : this(null, null) {
+    public class Message
+    {
+        public Message() : this(null, null)
+        {
         }
 
-        public Message(string topic, byte[] body) : this(topic, null, new List<string>(), body) {}
+        public Message(string topic, byte[] body) : this(topic, null, new List<string>(), body) { }
 
-        public Message(string topic, string tag, byte[] body) : this(topic, tag, new List<string>(), body) {
+        public Message(string topic, string tag, byte[] body) : this(topic, tag, new List<string>(), body)
+        {
         }
 
-        public Message(string topic, string tag, List<string> keys, byte[] body) {
+        public Message(string topic, string tag, List<string> keys, byte[] body)
+        {
             this.messageId = SequenceGenerator.Instance.Next();
             this.maxAttemptTimes = 3;
             this.topic = topic;
@@ -58,37 +62,43 @@ namespace Org.Apache.Rocketmq
 
         private string topic;
 
-        public string Topic {
+        public string Topic
+        {
             get { return topic; }
             set { this.topic = value; }
         }
 
         private byte[] body;
-        public byte[] Body {
+        public byte[] Body
+        {
             get { return body; }
             set { this.body = value; }
         }
 
         private string tag;
-        public string Tag {
+        public string Tag
+        {
             get { return tag; }
             set { this.tag = value; }
         }
 
         private List<string> keys;
-        public List<string> Keys{
+        public List<string> Keys
+        {
             get { return keys; }
             set { this.keys = value; }
         }
 
         private Dictionary<string, string> userProperties;
-        public Dictionary<string, string> UserProperties {
+        public Dictionary<string, string> UserProperties
+        {
             get { return userProperties; }
             set { this.userProperties = value; }
         }
 
         private Dictionary<string, string> systemProperties;
-        internal Dictionary<string, string> SystemProperties {
+        internal Dictionary<string, string> SystemProperties
+        {
             get { return systemProperties; }
             set { this.systemProperties = value; }
         }

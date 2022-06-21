@@ -17,7 +17,8 @@
 
 namespace Org.Apache.Rocketmq
 {
-    public enum MessageType {
+    public enum MessageType
+    {
         Normal,
         Fifo,
         Delay,

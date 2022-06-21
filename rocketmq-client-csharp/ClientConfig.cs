@@ -18,11 +18,14 @@ using System;
 using System.Collections.Generic;
 using rmq = Apache.Rocketmq.V2;
 
-namespace Org.Apache.Rocketmq {
+namespace Org.Apache.Rocketmq
+{
 
-    public class ClientConfig : IClientConfig {
+    public class ClientConfig : IClientConfig
+    {
 
-        public ClientConfig() {
+        public ClientConfig()
+        {
             var hostName = System.Net.Dns.GetHostName();
             var pid = System.Diagnostics.Process.GetCurrentProcess().Id;
             this.clientId_ = string.Format("{0}@{1}#{2}", hostName, pid, instanceName_);
@@ -34,39 +37,50 @@ namespace Org.Apache.Rocketmq {
             this._publishing = new Publishing();
         }
 
-        public string region() {
+        public string region()
+        {
             return _region;
         }
-        public string Region {
+        public string Region
+        {
             set { _region = value; }
         }
 
-        public string serviceName() {
+        public string serviceName()
+        {
             return _serviceName;
         }
-        public string ServiceName {
+        public string ServiceName
+        {
             set { _serviceName = value; }
         }
 
-        public string resourceNamespace() {
+        public string resourceNamespace()
+        {
             return _resourceNamespace;
         }
-        public string ResourceNamespace {
+        public string ResourceNamespace
+        {
+            get { return _resourceNamespace; }
             set { _resourceNamespace = value; }
         }
 
-        public ICredentialsProvider credentialsProvider() {
+        public ICredentialsProvider credentialsProvider()
+        {
             return credentialsProvider_;
         }
-        
-        public ICredentialsProvider CredentialsProvider {
+
+        public ICredentialsProvider CredentialsProvider
+        {
             set { credentialsProvider_ = value; }
         }
 
-        public string tenantId() {
+        public string tenantId()
+        {
             return _tenantId;
         }
-        public string TenantId {
+        public string TenantId
+        {
             set { _tenantId = value; }
         }
 
@@ -82,32 +96,40 @@ namespace Org.Apache.Rocketmq {
             }
         }
 
-        public TimeSpan getLongPollingTimeout() {
+        public TimeSpan getLongPollingTimeout()
+        {
             return longPollingIoTimeout_;
         }
-        public TimeSpan LongPollingTimeout {
+        public TimeSpan LongPollingTimeout
+        {
             set { longPollingIoTimeout_ = value; }
         }
 
-        public string getGroupName() {
+        public string getGroupName()
+        {
             return groupName_;
         }
-        public string GroupName {
+        public string GroupName
+        {
             set { groupName_ = value; }
         }
 
-        public string clientId() {
+        public string clientId()
+        {
             return clientId_;
         }
 
-        public bool isTracingEnabled() {
+        public bool isTracingEnabled()
+        {
             return tracingEnabled_;
         }
-        public bool TracingEnabled {
+        public bool TracingEnabled
+        {
             set { tracingEnabled_ = value; }
         }
 
-        public void setInstanceName(string instanceName) {
+        public void setInstanceName(string instanceName)
+        {
             this.instanceName_ = instanceName;
         }
 

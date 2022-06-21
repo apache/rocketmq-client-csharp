@@ -19,13 +19,16 @@ using Grpc.Core;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using rmq = Apache.Rocketmq.V2;
 
-namespace Org.Apache.Rocketmq {
+namespace Org.Apache.Rocketmq
+{
 
     [TestClass]
-    public class ClientManagerTest {
-        
+    public class ClientManagerTest
+    {
+
         [TestMethod]
-        public void TestResolveRoute() {
+        public void TestResolveRoute()
+        {
             string topic = "cpp_sdk_standard";
             string resourceNamespace = "MQ_INST_1080056302921134_BXuIbML7";
             var request = new rmq::QueryRouteRequest();

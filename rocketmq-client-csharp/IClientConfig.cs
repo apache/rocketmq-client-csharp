@@ -16,8 +16,10 @@
  */
 using System;
 
-namespace Org.Apache.Rocketmq {
-    public interface IClientConfig {
+namespace Org.Apache.Rocketmq
+{
+    public interface IClientConfig
+    {
         string region();
 
         string serviceName();

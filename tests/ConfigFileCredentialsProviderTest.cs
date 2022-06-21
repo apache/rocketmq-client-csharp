@@ -18,11 +18,14 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 
-namespace Org.Apache.Rocketmq {
+namespace Org.Apache.Rocketmq
+{
     [TestClass]
-    public class ConfigFileCredentialsProviderTest {
+    public class ConfigFileCredentialsProviderTest
+    {
         [TestMethod]
-        public void testGetCredentials() {
+        public void testGetCredentials()
+        {
             var provider = new ConfigFileCredentialsProvider();
             var credentials = provider.getCredentials();
             Assert.IsNotNull(credentials);
