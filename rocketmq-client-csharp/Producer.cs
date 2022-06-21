@@ -47,7 +47,9 @@ namespace Org.Apache.Rocketmq
 
         protected override void PrepareHeartbeatData(rmq::HeartbeatRequest request)
         {
+            request.ClientType = rmq::ClientType.Producer;
 
+            // Concept of ProducerGroup has been removed.
         }
 
         public async Task<SendReceipt> Send(Message message)

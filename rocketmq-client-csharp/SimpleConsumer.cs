@@ -19,6 +19,7 @@ using rmq = Apache.Rocketmq.V2;
 using NLog;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using Apache.Rocketmq.V2;
 
 namespace Org.Apache.Rocketmq
 {
@@ -63,6 +64,10 @@ namespace Org.Apache.Rocketmq
 
         protected override void PrepareHeartbeatData(rmq::HeartbeatRequest request)
         {
+            request.ClientType = rmq::ClientType.SimpleConsumer;
+            request.Group = new rmq::Resource();
+            request.Group.Name = Group;
+            request.Group.ResourceNamespace = ResourceNamespace;
         }
 
         public void Subscribe(string topic, rmq::FilterType filterType, string expression)
@@ -75,6 +80,17 @@ namespace Org.Apache.Rocketmq
             entry.Expression.Type = filterType;
             entry.Expression.Expression = expression;
             subscriptions_.AddOrUpdate(topic, entry, (k, prev) => { return entry; });
+        }
+
+        public override void OnReceive(Settings settings)
+        {
+            base.OnReceive(settings);
+
+            if (settings.Subscription.Fifo)
+            {
+                fifo_ = true;
+            }
+
         }
 
         private string group_;

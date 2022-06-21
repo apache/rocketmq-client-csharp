@@ -398,6 +398,21 @@ namespace Org.Apache.Rocketmq
             return true;
         }
 
+        public virtual void OnReceive(rmq::Settings settings)
+        {
+            if (null != settings.Metric)
+            {
+                _clientSettings.Metric = new rmq::Metric();
+                _clientSettings.Metric.MergeFrom(settings.Metric);
+            }
+
+            if (null != settings.BackoffPolicy)
+            {
+                _clientSettings.BackoffPolicy = new rmq::RetryPolicy();
+                _clientSettings.BackoffPolicy.MergeFrom(settings.BackoffPolicy);
+            }
+        }
+
         protected readonly IClientManager Manager;
 
         private readonly ConcurrentDictionary<string, TopicRouteData> _topicRouteTable;

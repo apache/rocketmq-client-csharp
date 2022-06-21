@@ -60,8 +60,8 @@ namespace Org.Apache.Rocketmq
                             }
                         case rmq::TelemetryCommand.CommandOneofCase.Settings:
                             {
-
                                 Logger.Info($"Received settings from server {cmd.Settings.ToString()}");
+                                _client.OnReceive(cmd.Settings);
                                 break;
                             }
                         case rmq::TelemetryCommand.CommandOneofCase.PrintThreadStackTraceCommand:
