@@ -75,11 +75,11 @@ namespace Org.Apache.Rocketmq
             }, 30, _updateTopicRouteCts.Token);
         }
 
-        public virtual void Shutdown()
+        public virtual async Task Shutdown()
         {
             Logger.Info($"Shutdown client[resource-namespace={_resourceNamespace}");
             _updateTopicRouteCts.Cancel();
-            Manager.Shutdown().GetAwaiter().GetResult();
+            await Manager.Shutdown();
         }
 
         protected string FilterBroker(Func<string, bool> acceptor)
@@ -398,7 +398,7 @@ namespace Org.Apache.Rocketmq
             return true;
         }
 
-        public virtual void OnReceive(rmq::Settings settings)
+        public virtual void OnSettingsReceived(rmq::Settings settings)
         {
             if (null != settings.Metric)
             {

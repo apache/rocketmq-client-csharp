@@ -31,6 +31,6 @@ namespace Org.Apache.Rocketmq
         void BuildClientSetting(rmq::Settings settings);
 
 
-        void OnReceive(rmq::Settings settings);
+        void OnSettingsReceived(rmq::Settings settings);
     }
 }

@@ -17,6 +17,7 @@
 
 using rmq = Apache.Rocketmq.V2;
 using NLog;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using Apache.Rocketmq.V2;
@@ -57,9 +58,13 @@ namespace Org.Apache.Rocketmq
             base.createSession(_accessPoint.TargetUrl());
         }
 
-        public override void Shutdown()
+        public override async Task Shutdown()
         {
-            base.Shutdown();
+            await base.Shutdown();
+            if (!await NotifyClientTermination())
+            {
+                Logger.Warn("Failed to NotifyClientTermination");
+            }
         }
 
         protected override void PrepareHeartbeatData(rmq::HeartbeatRequest request)
@@ -82,9 +87,9 @@ namespace Org.Apache.Rocketmq
             subscriptions_.AddOrUpdate(topic, entry, (k, prev) => { return entry; });
         }
 
-        public override void OnReceive(Settings settings)
+        public override void OnSettingsReceived(Settings settings)
         {
-            base.OnReceive(settings);
+            base.OnSettingsReceived(settings);
 
             if (settings.Subscription.Fifo)
             {

@@ -23,7 +23,7 @@ namespace Org.Apache.Rocketmq
     {
         void Start();
 
-        void Shutdown();
+        Task Shutdown();
 
         Task<SendReceipt> Send(Message message);
     }

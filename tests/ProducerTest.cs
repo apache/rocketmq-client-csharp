@@ -52,7 +52,7 @@ namespace Org.Apache.Rocketmq
             var msg = new Message(topic, body);
             var sendResult = await producer.Send(msg);
             Assert.IsNotNull(sendResult);
-            producer.Shutdown();
+            await producer.Shutdown();
         }
 
         private static string resourceNamespace = "";

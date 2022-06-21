@@ -17,6 +17,7 @@
 using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using rmq = Apache.Rocketmq.V2;
+using System.Threading.Tasks;
 
 namespace Org.Apache.Rocketmq
 {
@@ -26,7 +27,7 @@ namespace Org.Apache.Rocketmq
     {
 
         [TestMethod]
-        public void TestStart()
+        public async Task TestStart()
         {
             var accessPoint = new AccessPoint();
             var host = "11.166.42.94";
@@ -41,6 +42,7 @@ namespace Org.Apache.Rocketmq
             simpleConsumer.Subscribe(topic, rmq::FilterType.Tag, "*");
             simpleConsumer.Start();
             Thread.Sleep(10_000);
+            await simpleConsumer.Shutdown();
         }
 
     }

@@ -66,13 +66,13 @@ namespace Org.Apache.Rocketmq
             }, 10, _scanExpiredProcessQueueCTS.Token);
         }
 
-        public override void Shutdown()
+        public override async Task Shutdown()
         {
             _scanAssignmentCTS.Cancel();
             _scanExpiredProcessQueueCTS.Cancel();
 
             // Shutdown resources of derived class
-            base.Shutdown();
+            await base.Shutdown();
         }
 
         private async Task scanLoadAssignments()
