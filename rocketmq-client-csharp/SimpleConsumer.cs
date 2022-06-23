@@ -23,6 +23,8 @@ using System.Collections.Concurrent;
 using System.Threading;
 using Grpc.Core;
 using System.Collections.Generic;
+using System.Linq;
+using Google.Protobuf.WellKnownTypes;
 
 namespace Org.Apache.Rocketmq
 {
@@ -157,6 +159,91 @@ namespace Org.Apache.Rocketmq
                 Logger.Info($"#OnSettingsReceived: Group {_group} is FIFO");
             }
         }
+
+        public async Task<List<Message>> Receive(int batchSize, TimeSpan timeout)
+        {
+            var messageQueue = NextQueue();
+            if (null == messageQueue)
+            {
+                return new List<Message>();
+            }
+
+            var request = new rmq.ReceiveMessageRequest();
+            request.Group = new rmq.Resource();
+            request.Group.ResourceNamespace = ResourceNamespace;
+            request.Group.Name = _group;
+
+            request.MessageQueue = new rmq.MessageQueue();
+            request.MessageQueue.MergeFrom(messageQueue);
+            request.BatchSize = batchSize;
+            
+            // Client is responsible of extending message invisibility duration
+            request.AutoRenew = false;
+            
+            var targetUrl = Utilities.TargetUrl(messageQueue);
+            var metadata = new Metadata();
+            Signature.sign(this, metadata);
+            
+            return await Manager.ReceiveMessage(targetUrl, metadata, request, timeout);
+        }
+
+
+        public async Task Ack(Message message)
+        {
+            var request = new rmq.AckMessageRequest();
+            request.Group = new rmq.Resource();
+            request.Group.ResourceNamespace = ResourceNamespace;
+            request.Group.Name = _group;
+
+            request.Topic = new rmq.Resource();
+            request.Topic.ResourceNamespace = ResourceNamespace;
+            request.Topic.Name = message.Topic;
+            
+            var entry = new rmq.AckMessageEntry();
+            request.Entries.Add(entry);
+            entry.MessageId = message.MessageId;
+            entry.ReceiptHandle = message._receiptHandle;
+
+            var targetUrl = "";
+            var metadata = new Metadata();
+            Signature.sign(this, metadata);
+
+            await Manager.Ack(targetUrl, metadata, request, TimeSpan.FromSeconds(3));
+        }
+        
+        private rmq.MessageQueue NextQueue()
+        {
+            if (_topicAssignments.IsEmpty)
+            {
+                return null;
+            }
+            
+            UInt32 topicSeq = CurrentTopicSequence.Value;
+            CurrentTopicSequence.Value = topicSeq + 1;
+
+            var total = _topicAssignments.Count;
+            var topicIndex = topicSeq % total;
+            var topic = _topicAssignments.Keys.Skip((int)topicIndex).First();
+            
+            UInt32 queueSeq = CurrentQueueSequence.Value;
+            CurrentQueueSequence.Value = queueSeq + 1;
+            List<rmq.Assignment> assignments;
+            if (_topicAssignments.TryGetValue(topic, out assignments))
+            {
+                if (null == assignments)
+                {
+                    return null;
+                }
+                var idx = queueSeq % assignments.Count;
+                return assignments[(int)idx].MessageQueue;
+
+            }
+
+            return null;
+        }
+
+        private ThreadLocal<UInt32> CurrentTopicSequence = new ThreadLocal<UInt32>(true);
+        private ThreadLocal<UInt32> CurrentQueueSequence = new ThreadLocal<UInt32>(true);
 
         private readonly string _group;
         private bool _fifo;
