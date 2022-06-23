@@ -148,18 +148,74 @@ namespace Org.Apache.Rocketmq
             return assignments;
         }
 
-        public async Task<List<Message>> ReceiveMessage(string target, grpc::Metadata metadata, rmq::ReceiveMessageRequest request, TimeSpan timeout)
+        public async Task<List<Message>> ReceiveMessage(string target, grpc::Metadata metadata, 
+            rmq::ReceiveMessageRequest request, TimeSpan timeout)
         {
             var rpcClient = GetRpcClient(target);
             List<rmq::ReceiveMessageResponse> response = await rpcClient.ReceiveMessage(metadata, request, timeout);
-            // TODO: 
+
+            if (null == response || 0 == response.Count)
+            {
+                // TODO: throw an exception to propagate this error?
+                return new List<Message>();
+            }
 
             List<Message> messages = new List<Message>();
+            
+            foreach (var entry in response)
+            {
+                switch (entry.ContentCase)
+                {
+                    case rmq.ReceiveMessageResponse.ContentOneofCase.None:
+                    {
+                        Logger.Warn("Unexpected ReceiveMessageResponse content type");
+                        break;
+                    }
+                    
+                    case rmq.ReceiveMessageResponse.ContentOneofCase.Status:
+                    {
+                        switch (entry.Status.Code)
+                        {
+                            case rmq.Code.Ok:
+                            {
 
+                                break;
+                            }
+
+                            case rmq.Code.Forbidden:
+                            {
+                                Logger.Warn("Receive message denied");
+                                break;
+                            }
+                            case rmq.Code.TooManyRequests:
+                            {
+                                break;
+                            }
+                        }
+                        break;
+                    }
+
+                    case rmq.ReceiveMessageResponse.ContentOneofCase.Message:
+                    {
+                        var message = Convert(target, entry.Message);
+                        messages.Add(message);
+                        break;
+                    }
+
+                    case rmq.ReceiveMessageResponse.ContentOneofCase.DeliveryTimestamp:
+                    {
+                        var begin = entry.DeliveryTimestamp;
+                        var costs = DateTime.UtcNow.Subtract(TimeSpan.FromSeconds(begin.Seconds))
+                            .Subtract(TimeSpan.FromMilliseconds(begin.Nanos / 1_000_000));
+                        Logger.Debug($"Delivery of messages from server to clients cost {costs.ToShortTimeString()}");
+                        break;
+                    }
+                }
+            }
             return messages;
         }
 
-        private Message convert(string sourceHost, rmq::Message message)
+        private Message Convert(string sourceHost, rmq::Message message)
         {
             var msg = new Message();
             msg.Topic = message.Topic.Name;
@@ -179,7 +235,7 @@ namespace Org.Apache.Rocketmq
             else if (rmq::DigestType.Md5 == message.SystemProperties.BodyDigest.Type)
             {
                 var checksum = MD5.HashData(raw);
-                if (!message.SystemProperties.BodyDigest.Checksum.Equals(Convert.ToHexString(checksum)))
+                if (!message.SystemProperties.BodyDigest.Checksum.Equals(System.Convert.ToHexString(checksum)))
                 {
                     msg._bodyChecksumVerified = false;
                 }
@@ -187,7 +243,7 @@ namespace Org.Apache.Rocketmq
             else if (rmq::DigestType.Sha1 == message.SystemProperties.BodyDigest.Type)
             {
                 var checksum = SHA1.HashData(raw);
-                if (!message.SystemProperties.BodyDigest.Checksum.Equals(Convert.ToHexString(checksum)))
+                if (!message.SystemProperties.BodyDigest.Checksum.Equals(System.Convert.ToHexString(checksum)))
                 {
                     msg._bodyChecksumVerified = false;
                 }

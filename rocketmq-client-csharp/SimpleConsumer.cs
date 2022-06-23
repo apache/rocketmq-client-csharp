@@ -17,14 +17,12 @@
 
 using System;
 using rmq = Apache.Rocketmq.V2;
-using NLog;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Threading;
 using Grpc.Core;
 using System.Collections.Generic;
 using System.Linq;
-using Google.Protobuf.WellKnownTypes;
 
 namespace Org.Apache.Rocketmq
 {
@@ -165,6 +163,7 @@ namespace Org.Apache.Rocketmq
             var messageQueue = NextQueue();
             if (null == messageQueue)
             {
+                Logger.Debug("NextQueue returned null");
                 return new List<Message>();
             }
 
@@ -204,11 +203,10 @@ namespace Org.Apache.Rocketmq
             entry.MessageId = message.MessageId;
             entry.ReceiptHandle = message._receiptHandle;
 
-            var targetUrl = "";
+            var targetUrl = message._sourceHost;
             var metadata = new Metadata();
             Signature.sign(this, metadata);
-
-            await Manager.Ack(targetUrl, metadata, request, TimeSpan.FromSeconds(3));
+            await Manager.Ack(targetUrl, metadata, request, RequestTimeout);
         }
         
         private rmq.MessageQueue NextQueue()
