@@ -208,6 +208,26 @@ namespace Org.Apache.Rocketmq
             Signature.sign(this, metadata);
             await Manager.Ack(targetUrl, metadata, request, RequestTimeout);
         }
+
+        public async Task ChangeInvisibleDuration(Message message, TimeSpan invisibleDuration)
+        {
+            var request = new rmq.ChangeInvisibleDurationRequest();
+            request.Group = new rmq.Resource();
+            request.Group.ResourceNamespace = ResourceNamespace;
+            request.Group.Name = _group;
+
+            request.Topic = new rmq.Resource();
+            request.Topic.ResourceNamespace = ResourceNamespace;
+            request.Topic.Name = message.Topic;
+
+            request.ReceiptHandle = message._receiptHandle;
+            request.MessageId = message.MessageId;
+
+            var targetUrl = message._sourceHost;
+            var metadata = new Metadata();
+            Signature.sign(this, metadata);
+            await Manager.ChangeInvisibleDuration(targetUrl, metadata, request, RequestTimeout);
+        }
         
         private rmq.MessageQueue NextQueue()
         {
