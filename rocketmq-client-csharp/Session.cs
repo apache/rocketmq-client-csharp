@@ -24,7 +24,7 @@ using rmq = Apache.Rocketmq.V2;
 
 namespace Org.Apache.Rocketmq
 {
-    class Session
+    public class Session
     {
         private static readonly Logger Logger = MqLogManager.Instance.GetCurrentClassLogger();
 

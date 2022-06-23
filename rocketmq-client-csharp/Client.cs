@@ -479,10 +479,10 @@ namespace Org.Apache.Rocketmq
         protected readonly AccessPoint _accessPoint;
 
         // This field is subject changes from servers.
-        protected rmq::Settings _clientSettings;
+        protected readonly rmq::Settings _clientSettings;
 
-        private Random random = new Random();
-
-        private ConcurrentDictionary<string, Session> _sessions = new ConcurrentDictionary<string, Session>();
+        private readonly Random random = new Random();
+        
+        protected readonly ConcurrentDictionary<string, Session> _sessions = new ConcurrentDictionary<string, Session>();
     }
 }
