@@ -23,6 +23,7 @@ using System.Threading;
 using Grpc.Core;
 using System.Collections.Generic;
 using System.Linq;
+using Google.Protobuf.WellKnownTypes;
 
 namespace Org.Apache.Rocketmq
 {
@@ -222,6 +223,8 @@ namespace Org.Apache.Rocketmq
 
             request.ReceiptHandle = message._receiptHandle;
             request.MessageId = message.MessageId;
+            
+            request.InvisibleDuration = Duration.FromTimeSpan(invisibleDuration);
 
             var targetUrl = message._sourceHost;
             var metadata = new Metadata();
