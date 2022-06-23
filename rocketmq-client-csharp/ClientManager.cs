@@ -84,6 +84,7 @@ namespace Org.Apache.Rocketmq
             rmq::QueryRouteRequest request, TimeSpan timeout)
         {
             var rpcClient = GetRpcClient(target);
+            Logger.Debug($"QueryRouteRequest: {request.ToString()}");
             var queryRouteResponse = await rpcClient.QueryRoute(metadata, request, timeout);
 
             if (queryRouteResponse.Status.Code != rmq::Code.Ok)
@@ -91,6 +92,7 @@ namespace Org.Apache.Rocketmq
                 Logger.Warn($"Failed to query route entries for topic={request.Topic.Name} from {target}: {queryRouteResponse.Status.ToString()}");
                 // Raise an application layer exception
             }
+            Logger.Debug($"QueryRouteResponse: {queryRouteResponse.ToString()}");
 
             var messageQueues = new List<rmq::MessageQueue>();
             foreach (var messageQueue in queryRouteResponse.MessageQueues)
@@ -105,6 +107,7 @@ namespace Org.Apache.Rocketmq
             TimeSpan timeout)
         {
             var rpcClient = GetRpcClient(target);
+            Logger.Debug($"Heartbeat to {target}, Request: {request.ToString()}");
             var response = await rpcClient.Heartbeat(metadata, request, timeout);
             Logger.Debug($"Heartbeat to {target} response status: {response.Status.ToString()}");
             return response.Status.Code == rmq::Code.Ok;

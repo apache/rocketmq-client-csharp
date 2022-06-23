@@ -21,7 +21,7 @@ namespace Org.Apache.Rocketmq
 {
     public interface IProducer
     {
-        void Start();
+        Task Start();
 
         Task Shutdown();
 

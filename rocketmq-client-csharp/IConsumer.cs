@@ -20,7 +20,7 @@ namespace Org.Apache.Rocketmq
 {
     public interface IConsumer
     {
-        void Start();
+        Task Start();
 
         Task Shutdown();
     }

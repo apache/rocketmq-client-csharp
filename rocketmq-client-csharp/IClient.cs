@@ -16,6 +16,7 @@
  */
 
 using System.Threading.Tasks;
+using System.Threading;
 using System;
 using rmq = Apache.Rocketmq.V2;
 
@@ -32,5 +33,7 @@ namespace Org.Apache.Rocketmq
 
 
         void OnSettingsReceived(rmq::Settings settings);
+
+        CancellationTokenSource TelemetryCts();
     }
 }

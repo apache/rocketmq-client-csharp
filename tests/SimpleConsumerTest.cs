@@ -30,7 +30,8 @@ namespace Org.Apache.Rocketmq
         public async Task TestStart()
         {
             var accessPoint = new AccessPoint();
-            var host = "11.166.42.94";
+            // var host = "11.166.42.94";
+            var host = "127.0.0.1";
             var port = 8081;
             accessPoint.Host = host;
             accessPoint.Port = port;
@@ -40,8 +41,8 @@ namespace Org.Apache.Rocketmq
 
             var simpleConsumer = new SimpleConsumer(accessPoint, resourceNamespace, group);
             simpleConsumer.Subscribe(topic, rmq::FilterType.Tag, "*");
-            simpleConsumer.Start();
-            Thread.Sleep(10_000);
+            await simpleConsumer.Start();
+            Thread.Sleep(1_000);
             await simpleConsumer.Shutdown();
         }
 

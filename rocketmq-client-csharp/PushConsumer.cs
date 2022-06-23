@@ -34,14 +34,14 @@ namespace Org.Apache.Rocketmq
             _scanExpiredProcessQueueCTS = new CancellationTokenSource();
         }
 
-        public override async void Start()
+        public override async Task Start()
         {
             if (null == _messageListener)
             {
                 throw new System.Exception("Bad configuration: message listener is required");
             }
 
-            base.Start();
+            await base.Start();
 
             // Step-1: Resolve topic routes
             List<Task<TopicRouteData>> queryRouteTasks = new List<Task<TopicRouteData>>();

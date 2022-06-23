@@ -19,6 +19,7 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Diagnostics;
 using System;
 using rmq = Apache.Rocketmq.V2;
 using grpc = global::Grpc.Core;
@@ -64,21 +65,34 @@ namespace Org.Apache.Rocketmq
             _updateTopicRouteCts = new CancellationTokenSource();
 
             _healthCheckCts = new CancellationTokenSource();
+
+            telemetryCts_ = new CancellationTokenSource();
         }
 
-        public virtual void Start()
+        public virtual async Task Start()
         {
             schedule(async () =>
             {
                 await UpdateTopicRoute();
 
             }, 30, _updateTopicRouteCts.Token);
+
+            // Get routes for topics of interest.
+            await UpdateTopicRoute();
+
+            string accessPointUrl = _accessPoint.TargetUrl();
+            createSession(accessPointUrl);
+
+            await _sessions[accessPointUrl].AwaitSettingNegotiationCompletion();
+
+            await Heartbeat();
         }
 
         public virtual async Task Shutdown()
         {
             Logger.Info($"Shutdown client[resource-namespace={_resourceNamespace}");
             _updateTopicRouteCts.Cancel();
+            telemetryCts_.Cancel();
             await Manager.Shutdown();
         }
 
@@ -120,32 +134,58 @@ namespace Org.Apache.Rocketmq
 
         private async Task UpdateTopicRoute()
         {
-            List<Task<TopicRouteData>> tasks = new List<Task<TopicRouteData>>();
+            HashSet<string> topics = new HashSet<string>();
+            foreach (var topic in topicsOfInterest_)
+            {
+                topics.Add(topic);
+            }
+
             foreach (var item in _topicRouteTable)
             {
-                tasks.Add(GetRouteFor(item.Key, true));
+                topics.Add(item.Key);
+            }
+            Logger.Debug($"Fetch topic route for {topics.Count} topics");
+
+            // Wrap topics into list such that we can map async result to topic 
+            List<string> topicList = new List<string>();
+            topicList.AddRange(topics);
+
+            List<Task<TopicRouteData>> tasks = new List<Task<TopicRouteData>>();
+            foreach (var item in topicList)
+            {
+                tasks.Add(GetRouteFor(item, true));
             }
 
             // Update topic route data
             TopicRouteData[] result = await Task.WhenAll(tasks);
+            var i = 0;
             foreach (var item in result)
             {
                 if (null == item)
                 {
+                    Logger.Warn($"Failed to fetch route for {topicList[i]}, null response");
+                    ++i;
                     continue;
                 }
 
                 if (0 == item.MessageQueues.Count)
                 {
+                    Logger.Warn($"Failed to fetch route for {topicList[i]}, empty message queue");
+                    ++i;
                     continue;
                 }
 
                 var topicName = item.MessageQueues[0].Topic.Name;
+
+                // Make assertion
+                Debug.Assert(topicName.Equals(topicList[i]));
+
                 var existing = _topicRouteTable[topicName];
                 if (!existing.Equals(item))
                 {
                     _topicRouteTable[topicName] = item;
                 }
+                ++i;
             }
         }
 
@@ -202,6 +242,7 @@ namespace Org.Apache.Rocketmq
             TopicRouteData topicRouteData;
             try
             {
+                Logger.Debug($"Resolving route for topic={topic}");
                 topicRouteData = await Manager.ResolveRoute(target, metadata, request, RequestTimeout);
                 if (null != topicRouteData)
                 {
@@ -310,6 +351,7 @@ namespace Org.Apache.Rocketmq
             Signature.sign(this, metadata);
             var stream = Manager.Telemetry(url, metadata);
             var session = new Session(url, stream, this);
+            _sessions.TryAdd(url, session);
             Task.Run(async () =>
             {
                 await session.Loop();
@@ -415,10 +457,24 @@ namespace Org.Apache.Rocketmq
 
         protected readonly IClientManager Manager;
 
+        private readonly HashSet<string> topicsOfInterest_ = new HashSet<string>();
+
+        public void AddTopicOfInterest(string topic)
+        {
+            topicsOfInterest_.Add(topic);
+        }
+
         private readonly ConcurrentDictionary<string, TopicRouteData> _topicRouteTable;
         private readonly CancellationTokenSource _updateTopicRouteCts;
 
         private readonly CancellationTokenSource _healthCheckCts;
+
+        private readonly CancellationTokenSource telemetryCts_ = new CancellationTokenSource();
+
+        public CancellationTokenSource TelemetryCts()
+        {
+            return telemetryCts_;
+        }
 
         protected readonly AccessPoint _accessPoint;
 
@@ -426,5 +482,7 @@ namespace Org.Apache.Rocketmq
         protected rmq::Settings _clientSettings;
 
         private Random random = new Random();
+
+        private ConcurrentDictionary<string, Session> _sessions = new ConcurrentDictionary<string, Session>();
     }
 }

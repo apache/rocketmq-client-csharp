@@ -18,7 +18,6 @@
 using rmq = Apache.Rocketmq.V2;
 using NLog;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
 using Apache.Rocketmq.V2;
 
@@ -52,10 +51,9 @@ namespace Org.Apache.Rocketmq
             }
         }
 
-        public override void Start()
+        public override async Task Start()
         {
-            base.Start();
-            base.createSession(_accessPoint.TargetUrl());
+            await base.Start();
         }
 
         public override async Task Shutdown()
@@ -85,6 +83,7 @@ namespace Org.Apache.Rocketmq
             entry.Expression.Type = filterType;
             entry.Expression.Expression = expression;
             subscriptions_.AddOrUpdate(topic, entry, (k, prev) => { return entry; });
+            AddTopicOfInterest(topic);
         }
 
         public override void OnSettingsReceived(Settings settings)
@@ -94,8 +93,8 @@ namespace Org.Apache.Rocketmq
             if (settings.Subscription.Fifo)
             {
                 fifo_ = true;
+                Logger.Info($"#OnSettingsReceived: Group {Group} is FIFO");
             }
-
         }
 
         private string group_;

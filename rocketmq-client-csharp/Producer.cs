@@ -33,9 +33,9 @@ namespace Org.Apache.Rocketmq
             this.loadBalancer = new ConcurrentDictionary<string, PublishLoadBalancer>();
         }
 
-        public override void Start()
+        public override async Task Start()
         {
-            base.Start();
+            await base.Start();
             // More initialization
         }
 
