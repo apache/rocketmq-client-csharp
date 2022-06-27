@@ -91,6 +91,12 @@ namespace Org.Apache.Rocketmq
             {
                 entry.SystemProperties.MessageType = rmq::MessageType.Delay;
                 entry.SystemProperties.DeliveryTimestamp = Timestamp.FromDateTime(message.DeliveryTimestamp);
+
+                if (message.Fifo())
+                {
+                    Logger.Warn("A message may not be FIFO and delayed at the same time");
+                    throw new MessageException("A message may not be both FIFO and Timed");
+                }
             } else if (!String.IsNullOrEmpty(message.MessageGroup))
             {
                 entry.SystemProperties.MessageType = rmq::MessageType.Fifo;

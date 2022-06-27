@@ -16,45 +16,136 @@
  */
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using Org.Apache.Rocketmq;
 
-namespace Org.Apache.Rocketmq
+
+namespace tests
 {
-
     [TestClass]
     public class ProducerTest
     {
 
+        private static AccessPoint _accessPoint;
+
         [ClassInitialize]
         public static void SetUp(TestContext context)
         {
-            credentialsProvider = new ConfigFileCredentialsProvider();
+            _accessPoint = new AccessPoint
+            {
+                Host = HOST,
+                Port = PORT
+            };
         }
 
         [ClassCleanup]
         public static void TearDown()
         {
-
         }
 
         [TestMethod]
-        public async Task TestSendMessage()
+        public async Task TestLifecycle()
         {
-            var accessPoint = new AccessPoint
-            {
-                Host = HOST,
-                Port = PORT
-            };
-            
-            var producer = new Producer(accessPoint, resourceNamespace);
+            var producer = new Producer(_accessPoint, resourceNamespace);
+            producer.CredentialsProvider = new ConfigFileCredentialsProvider();
+            producer.Region = "cn-hangzhou-pre";
+            await producer.Start();
+            await producer.Shutdown();
+        }
+
+        [TestMethod]
+        public async Task TestSendStandardMessage()
+        {
+            var producer = new Producer(_accessPoint, resourceNamespace);
             producer.CredentialsProvider = new ConfigFileCredentialsProvider();
             producer.Region = "cn-hangzhou-pre";
             await producer.Start();
             byte[] body = new byte[1024];
             Array.Fill(body, (byte)'x');
             var msg = new Message(topic, body);
+            
+            // Tag the massage. A message has at most one tag.
+            msg.Tag = "Tag-0";
+            
+            // Associate the message with one or multiple keys
+            var keys = new List<string>();
+            keys.Add("k1");
+            keys.Add("k2");
+            msg.Keys = keys;
+            
             var sendResult = await producer.Send(msg);
             Assert.IsNotNull(sendResult);
+            await producer.Shutdown();
+        }
+        
+        [TestMethod]
+        public async Task TestSendFifoMessage()
+        {
+            var producer = new Producer(_accessPoint, resourceNamespace);
+            producer.CredentialsProvider = new ConfigFileCredentialsProvider();
+            producer.Region = "cn-hangzhou-pre";
+            await producer.Start();
+            byte[] body = new byte[1024];
+            Array.Fill(body, (byte)'x');
+            var msg = new Message(topic, body);
+            
+            // Messages of the same group will get delivered one after another. 
+            msg.MessageGroup = "message-group-0";
+            
+            // Verify messages are FIFO iff their message group is not null or empty.
+            Assert.IsTrue(msg.Fifo());
+
+            var sendResult = await producer.Send(msg);
+            Assert.IsNotNull(sendResult);
+            await producer.Shutdown();
+        }
+        
+        [TestMethod]
+        public async Task TestSendScheduledMessage()
+        {
+            var producer = new Producer(_accessPoint, resourceNamespace);
+            producer.CredentialsProvider = new ConfigFileCredentialsProvider();
+            producer.Region = "cn-hangzhou-pre";
+            await producer.Start();
+            byte[] body = new byte[1024];
+            Array.Fill(body, (byte)'x');
+            var msg = new Message(topic, body);
+            
+            msg.DeliveryTimestamp = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+            Assert.IsTrue(msg.Scheduled());
+            
+            var sendResult = await producer.Send(msg);
+            Assert.IsNotNull(sendResult);
+            await producer.Shutdown();
+        }
+        
+        
+        /**
+         * Trying send a message that is both FIFO and Scheduled should fail.
+         */
+        [TestMethod]
+        public async Task TestSendMessage_Failure()
+        {
+            var producer = new Producer(_accessPoint, resourceNamespace);
+            producer.CredentialsProvider = new ConfigFileCredentialsProvider();
+            producer.Region = "cn-hangzhou-pre";
+            await producer.Start();
+            byte[] body = new byte[1024];
+            Array.Fill(body, (byte)'x');
+            var msg = new Message(topic, body);
+            msg.MessageGroup = "Group-0";
+            msg.DeliveryTimestamp = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+            Assert.IsTrue(msg.Scheduled());
+
+            try
+            {
+                await producer.Send(msg);
+                Assert.Fail("Should have raised an exception");
+            }
+            catch (MessageException e)
+            {
+            }
             await producer.Shutdown();
         }
 
@@ -62,7 +153,6 @@ namespace Org.Apache.Rocketmq
 
         private static string topic = "cpp_sdk_standard";
 
-        private static ICredentialsProvider credentialsProvider;
         private static string HOST = "127.0.0.1";
         private static int PORT = 8081;
     }

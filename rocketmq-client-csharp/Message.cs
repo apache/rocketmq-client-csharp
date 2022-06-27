@@ -17,6 +17,7 @@
 
 using System;
 using System.Collections.Generic;
+
 namespace Org.Apache.Rocketmq
 {
 
@@ -41,6 +42,7 @@ namespace Org.Apache.Rocketmq
             Keys = keys;
             Body = body;
             UserProperties = new Dictionary<string, string>();
+            DeliveryTimestamp = DateTime.MinValue;
         }
 
         public string MessageId
@@ -85,12 +87,11 @@ namespace Org.Apache.Rocketmq
             set;
         }
 
-        private DateTime _deliveryTimestamp = DateTime.MinValue;
 
         public DateTime DeliveryTimestamp
         {
-            get => _deliveryTimestamp;
-            set => _deliveryTimestamp = value;
+            get;
+            set;
         }
         
         public int DeliveryAttempt
@@ -103,6 +104,16 @@ namespace Org.Apache.Rocketmq
         {
             get;
             set;
+        }
+        
+        public bool Fifo()
+        {
+            return !String.IsNullOrEmpty(MessageGroup);
+        }
+
+        public bool Scheduled()
+        {
+            return DeliveryTimestamp > DateTime.UtcNow;
         }
 
         internal bool _checksumVerifiedOk = true;
