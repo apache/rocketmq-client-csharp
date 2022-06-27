@@ -14,39 +14,58 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+using System;
 using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using rmq = Apache.Rocketmq.V2;
 using System.Threading.Tasks;
+using Org.Apache.Rocketmq;
 
-namespace Org.Apache.Rocketmq
+namespace tests
 {
 
     [TestClass]
     public class SimpleConsumerTest
     {
 
-        [TestMethod]
-        public async Task TestStart()
-        {
-            var accessPoint = new AccessPoint();
-            // var host = "11.166.42.94";
-            var host = "127.0.0.1";
-            var port = 8081;
-            accessPoint.Host = host;
-            accessPoint.Port = port;
-            var resourceNamespace = "";
-            var group = "GID_cpp_sdk_standard";
-            var topic = "cpp_sdk_standard";
+        private static AccessPoint accessPoint;
+        private static string _resourceNamespace = "";
+        private static string _group = "GID_cpp_sdk_standard";
+        private static string _topic = "cpp_sdk_standard";
 
-            var simpleConsumer = new SimpleConsumer(accessPoint, resourceNamespace, group);
-            simpleConsumer.Subscribe(topic, rmq::FilterType.Tag, "*");
+
+        [ClassInitialize]
+        public static void SetUp(TestContext context)
+        {
+            accessPoint = new AccessPoint
+            {
+                Host = "127.0.0.1",
+                Port = 8081
+            };
+        }
+
+        [TestMethod]
+        public async Task TestLifecycle()
+        {
+            var simpleConsumer = new SimpleConsumer(accessPoint, _resourceNamespace, _group);
+            simpleConsumer.Subscribe(_topic, rmq::FilterType.Tag, "*");
             await simpleConsumer.Start();
             Thread.Sleep(1_000);
             await simpleConsumer.Shutdown();
         }
 
+        [TestMethod]
+        public async Task TestReceive()
+        {
+            var simpleConsumer = new SimpleConsumer(accessPoint, _resourceNamespace, _group);
+            simpleConsumer.Subscribe(_topic, rmq::FilterType.Tag, "*");
+            await simpleConsumer.Start();
+            var batchSize = 32;
+            var receiveTimeout = TimeSpan.FromSeconds(10);
+            var messages  = await simpleConsumer.Receive(batchSize, receiveTimeout);
+            Console.WriteLine($"{messages}");
+            await simpleConsumer.Shutdown();
+        }
     }
-
-
 }

@@ -178,7 +178,6 @@ namespace Org.Apache.Rocketmq
                         {
                             case rmq.Code.Ok:
                             {
-
                                 break;
                             }
 
@@ -189,6 +188,7 @@ namespace Org.Apache.Rocketmq
                             }
                             case rmq.Code.TooManyRequests:
                             {
+                                Logger.Warn("TooManyRequest: servers throttled");
                                 break;
                             }
                         }
@@ -205,9 +205,8 @@ namespace Org.Apache.Rocketmq
                     case rmq.ReceiveMessageResponse.ContentOneofCase.DeliveryTimestamp:
                     {
                         var begin = entry.DeliveryTimestamp;
-                        var costs = DateTime.UtcNow.Subtract(TimeSpan.FromSeconds(begin.Seconds))
-                            .Subtract(TimeSpan.FromMilliseconds(begin.Nanos / 1_000_000));
-                        Logger.Debug($"Delivery of messages from server to clients cost {costs.ToShortTimeString()}");
+                        var costs = DateTime.UtcNow - begin.ToDateTime();
+                        // TODO: Collect metrics
                         break;
                     }
                 }

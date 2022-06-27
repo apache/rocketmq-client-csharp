@@ -25,11 +25,13 @@ using rmq = Apache.Rocketmq.V2;
 using Grpc.Core;
 using Grpc.Core.Interceptors;
 using Grpc.Net.Client;
+using NLog;
 
 namespace Org.Apache.Rocketmq
 {
     public class RpcClient : IRpcClient
     {
+        protected static readonly Logger Logger = MqLogManager.Instance.GetCurrentClassLogger();
         private readonly rmq::MessagingService.MessagingServiceClient _stub;
         private readonly GrpcChannel _channel;
 
@@ -118,21 +120,25 @@ namespace Org.Apache.Rocketmq
             return await call.ResponseAsync;
         }
 
-        public async Task<List<rmq::ReceiveMessageResponse>> ReceiveMessage(Metadata metadata, rmq::ReceiveMessageRequest request,
-            TimeSpan timeout)
-        {
+        public async Task<List<rmq::ReceiveMessageResponse>> ReceiveMessage(Metadata metadata, 
+            rmq::ReceiveMessageRequest request, TimeSpan timeout) {
             var deadline = DateTime.UtcNow.Add(timeout);
             var callOptions = new CallOptions(metadata, deadline);
             var call = _stub.ReceiveMessage(request, callOptions);
             var result = new List<rmq::ReceiveMessageResponse>();
-            while (await call.ResponseStream.MoveNext())
+            var stream = call.ResponseStream;
+            while (await stream.MoveNext())
             {
-                result.Add(call.ResponseStream.Current);
+                var entry = stream.Current;
+                Logger.Debug($"Got ReceiveMessageResponse {entry}");
+                result.Add(entry);
             }
+            Logger.Debug($"Receiving of messages completed");
             return result;
         }
 
-        public async Task<rmq::AckMessageResponse> AckMessage(Metadata metadata, rmq::AckMessageRequest request, TimeSpan timeout)
+        public async Task<rmq::AckMessageResponse> AckMessage(Metadata metadata, rmq::AckMessageRequest request,
+            TimeSpan timeout)
         {
             var deadline = DateTime.UtcNow.Add(timeout);
             var callOptions = new CallOptions(metadata, deadline);
