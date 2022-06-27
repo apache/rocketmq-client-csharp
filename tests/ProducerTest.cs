@@ -80,6 +80,33 @@ namespace tests
         }
         
         [TestMethod]
+        public async Task TestSendMultipleMessages()
+        {
+            var producer = new Producer(_accessPoint, resourceNamespace);
+            producer.CredentialsProvider = new ConfigFileCredentialsProvider();
+            producer.Region = "cn-hangzhou-pre";
+            await producer.Start();
+            byte[] body = new byte[1024];
+            Array.Fill(body, (byte)'x');
+            for (var i = 0; i < 128; i++)
+            {
+                var msg = new Message(topic, body);
+            
+                // Tag the massage. A message has at most one tag.
+                msg.Tag = "Tag-0";
+            
+                // Associate the message with one or multiple keys
+                var keys = new List<string>();
+                keys.Add("k1");
+                keys.Add("k2");
+                msg.Keys = keys;
+                var sendResult = await producer.Send(msg);
+                Assert.IsNotNull(sendResult);                
+            }
+            await producer.Shutdown();
+        }
+        
+        [TestMethod]
         public async Task TestSendFifoMessage()
         {
             var producer = new Producer(_accessPoint, resourceNamespace);

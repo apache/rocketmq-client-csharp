@@ -191,6 +191,11 @@ namespace Org.Apache.Rocketmq
                                 Logger.Warn("TooManyRequest: servers throttled");
                                 break;
                             }
+                            default:
+                            {
+                                Logger.Warn("Unknown error status");
+                                break;
+                            }
                         }
                         break;
                     }

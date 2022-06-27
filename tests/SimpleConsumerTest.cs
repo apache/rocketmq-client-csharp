@@ -64,7 +64,7 @@ namespace tests
             var batchSize = 32;
             var receiveTimeout = TimeSpan.FromSeconds(10);
             var messages  = await simpleConsumer.Receive(batchSize, receiveTimeout);
-            Console.WriteLine($"{messages}");
+            Console.WriteLine($"Received {messages.Count} messages in all");
             await simpleConsumer.Shutdown();
         }
     }
