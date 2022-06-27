@@ -20,6 +20,7 @@ using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using rmq = Apache.Rocketmq.V2;
 using System.Threading.Tasks;
+using Castle.Core.Logging;
 using Org.Apache.Rocketmq;
 
 namespace tests
@@ -64,7 +65,43 @@ namespace tests
             var batchSize = 32;
             var receiveTimeout = TimeSpan.FromSeconds(10);
             var messages  = await simpleConsumer.Receive(batchSize, receiveTimeout);
-            Console.WriteLine($"Received {messages.Count} messages in all");
+            Assert.IsTrue(messages.Count > 0);
+            Assert.IsTrue(messages.Count <= batchSize);
+            await simpleConsumer.Shutdown();
+        }
+        
+        
+        [TestMethod]
+        public async Task TestAck()
+        {
+            var simpleConsumer = new SimpleConsumer(accessPoint, _resourceNamespace, _group);
+            simpleConsumer.Subscribe(_topic, rmq::FilterType.Tag, "*");
+            await simpleConsumer.Start();
+            var batchSize = 32;
+            var receiveTimeout = TimeSpan.FromSeconds(10);
+            var messages  = await simpleConsumer.Receive(batchSize, receiveTimeout);
+            foreach (var message in messages)
+            {
+                await simpleConsumer.Ack(message);
+                Console.WriteLine($"Ack {message.MessageId} OK");
+            }
+            await simpleConsumer.Shutdown();
+        }
+        
+        [TestMethod]
+        public async Task TestChangeInvisibleDuration()
+        {
+            var simpleConsumer = new SimpleConsumer(accessPoint, _resourceNamespace, _group);
+            simpleConsumer.Subscribe(_topic, rmq::FilterType.Tag, "*");
+            await simpleConsumer.Start();
+            var batchSize = 32;
+            var receiveTimeout = TimeSpan.FromSeconds(10);
+            var messages  = await simpleConsumer.Receive(batchSize, receiveTimeout);
+            foreach (var message in messages)
+            {
+                await simpleConsumer.ChangeInvisibleDuration(message, TimeSpan.FromSeconds(10));
+                Console.WriteLine($"ChangeInvisibleDuration for message[MsgId={message.MessageId}] OK");
+            }
             await simpleConsumer.Shutdown();
         }
     }
