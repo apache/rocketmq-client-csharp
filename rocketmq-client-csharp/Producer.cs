@@ -21,6 +21,7 @@ using rmq = Apache.Rocketmq.V2;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using Google.Protobuf;
+using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using NLog;
 
@@ -30,7 +31,7 @@ namespace Org.Apache.Rocketmq
     {
         public Producer(AccessPoint accessPoint, string resourceNamespace) : base(accessPoint, resourceNamespace)
         {
-            this.loadBalancer = new ConcurrentDictionary<string, PublishLoadBalancer>();
+            _loadBalancer = new ConcurrentDictionary<string, PublishLoadBalancer>();
         }
 
         public override async Task Start()
@@ -54,7 +55,7 @@ namespace Org.Apache.Rocketmq
 
         public async Task<SendReceipt> Send(Message message)
         {
-            if (!loadBalancer.ContainsKey(message.Topic))
+            if (!_loadBalancer.ContainsKey(message.Topic))
             {
                 var topicRouteData = await GetRouteFor(message.Topic, false);
                 if (null == topicRouteData || null == topicRouteData.MessageQueues || 0 == topicRouteData.MessageQueues.Count)
@@ -64,10 +65,10 @@ namespace Org.Apache.Rocketmq
                 }
 
                 var loadBalancerItem = new PublishLoadBalancer(topicRouteData);
-                loadBalancer.TryAdd(message.Topic, loadBalancerItem);
+                _loadBalancer.TryAdd(message.Topic, loadBalancerItem);
             }
 
-            var publishLB = loadBalancer[message.Topic];
+            var publishLb = _loadBalancer[message.Topic];
 
             var request = new rmq::SendMessageRequest();
             var entry = new rmq::Message();
@@ -85,6 +86,17 @@ namespace Org.Apache.Rocketmq
 
             entry.SystemProperties = new rmq::SystemProperties();
             entry.SystemProperties.MessageId = message.MessageId;
+            entry.SystemProperties.MessageType = rmq::MessageType.Normal;
+            if (DateTime.MinValue != message.DeliveryTimestamp)
+            {
+                entry.SystemProperties.MessageType = rmq::MessageType.Delay;
+                entry.SystemProperties.DeliveryTimestamp = Timestamp.FromDateTime(message.DeliveryTimestamp);
+            } else if (!String.IsNullOrEmpty(message.MessageGroup))
+            {
+                entry.SystemProperties.MessageType = rmq::MessageType.Fifo;
+                entry.SystemProperties.MessageGroup = message.MessageGroup;
+            }
+            
             if (!string.IsNullOrEmpty(message.Tag))
             {
                 entry.SystemProperties.Tag = message.Tag;
@@ -98,9 +110,8 @@ namespace Org.Apache.Rocketmq
                 }
             }
 
-            // string target = "https://";
             List<string> targets = new List<string>();
-            List<rmq::MessageQueue> candidates = publishLB.select(message.MaxAttemptTimes);
+            List<rmq::MessageQueue> candidates = publishLb.Select(message.MaxAttemptTimes);
             foreach (var messageQueue in candidates)
             {
                 targets.Add(Utilities.TargetUrl(messageQueue));
@@ -140,7 +151,6 @@ namespace Org.Apache.Rocketmq
             throw new Exception("Send message failed");
         }
 
-        private ConcurrentDictionary<string, PublishLoadBalancer> loadBalancer;
-        private static new readonly Logger Logger = MqLogManager.Instance.GetCurrentClassLogger();
+        private readonly ConcurrentDictionary<string, PublishLoadBalancer> _loadBalancer;
     }
 }

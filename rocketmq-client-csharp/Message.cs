@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+using System;
 using System.Collections.Generic;
 namespace Org.Apache.Rocketmq
 {
@@ -33,82 +34,80 @@ namespace Org.Apache.Rocketmq
 
         public Message(string topic, string tag, List<string> keys, byte[] body)
         {
-            this.messageId = SequenceGenerator.Instance.Next();
-            this.maxAttemptTimes = 3;
-            this.topic = topic;
-            this.tag = tag;
-            this.keys = keys;
-            this.body = body;
-            this.userProperties = new Dictionary<string, string>();
-            this.systemProperties = new Dictionary<string, string>();
+            MessageId = SequenceGenerator.Instance.Next();
+            MaxAttemptTimes = 3;
+            Topic = topic;
+            Tag = tag;
+            Keys = keys;
+            Body = body;
+            UserProperties = new Dictionary<string, string>();
         }
 
-        internal string messageId;
         public string MessageId
         {
-            get { return messageId; }
+            get;
+            internal set;
         }
-
-        internal string _receiptHandle;
-        internal string _sourceHost;
-
-        internal int _deliveryAttempt;
-        public int DeliveryAttempt
-        {
-            get { return _deliveryAttempt; }
-        }
-
-        internal bool _bodyChecksumVerified = true;
-
-        private string topic;
-
+        
         public string Topic
         {
-            get { return topic; }
-            set { this.topic = value; }
+            get;
+            set;
         }
 
-        private byte[] body;
         public byte[] Body
         {
-            get { return body; }
-            set { this.body = value; }
+            get;
+            set;
         }
 
-        private string tag;
         public string Tag
         {
-            get { return tag; }
-            set { this.tag = value; }
+            get;
+            set;
         }
 
-        private List<string> keys;
         public List<string> Keys
         {
-            get { return keys; }
-            set { this.keys = value; }
+            get;
+            set;
         }
 
-        private Dictionary<string, string> userProperties;
         public Dictionary<string, string> UserProperties
         {
-            get { return userProperties; }
-            set { this.userProperties = value; }
+            get;
+            set;
         }
 
-        private Dictionary<string, string> systemProperties;
-        internal Dictionary<string, string> SystemProperties
-        {
-            get { return systemProperties; }
-            set { this.systemProperties = value; }
-        }
-
-        private int maxAttemptTimes;
         public int MaxAttemptTimes
         {
-            get { return maxAttemptTimes; }
-            set { maxAttemptTimes = value; }
+            get;
+            set;
         }
+
+        private DateTime _deliveryTimestamp = DateTime.MinValue;
+
+        public DateTime DeliveryTimestamp
+        {
+            get => _deliveryTimestamp;
+            set => _deliveryTimestamp = value;
+        }
+        
+        public int DeliveryAttempt
+        {
+            get;
+            internal set;
+        }
+        
+        public string MessageGroup
+        {
+            get;
+            set;
+        }
+
+        internal bool _checksumVerifiedOk = true;
+        internal string _receiptHandle;
+        internal string _sourceHost;
     }
 
 }

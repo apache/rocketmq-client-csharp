@@ -42,10 +42,10 @@ namespace Org.Apache.Rocketmq
 
             this._messageQueues.Sort(Utilities.CompareMessageQueue);
             Random random = new Random();
-            this.roundRobinIndex = random.Next(0, this._messageQueues.Count);
+            this._roundRobinIndex = random.Next(0, this._messageQueues.Count);
         }
 
-        public void update(TopicRouteData route)
+        public void Update(TopicRouteData route)
         {
             List<rmq::MessageQueue> partitions = new List<rmq::MessageQueue>();
             foreach (var partition in route.MessageQueues)
@@ -68,7 +68,7 @@ namespace Org.Apache.Rocketmq
         /**
          * Accept a partition iff its broker is different.
          */
-        private bool accept(List<rmq::MessageQueue> existing, rmq::MessageQueue messageQueue)
+        private bool Accept(List<rmq::MessageQueue> existing, rmq::MessageQueue messageQueue)
         {
             if (0 == existing.Count)
             {
@@ -85,7 +85,7 @@ namespace Org.Apache.Rocketmq
             return true;
         }
 
-        public List<rmq::MessageQueue> select(int maxAttemptTimes)
+        public List<rmq::MessageQueue> Select(int maxAttemptTimes)
         {
             List<rmq::MessageQueue> result = new List<rmq::MessageQueue>();
 
@@ -94,13 +94,13 @@ namespace Org.Apache.Rocketmq
             {
                 return result;
             }
-            int start = ++roundRobinIndex;
+            int start = ++_roundRobinIndex;
             int found = 0;
 
             for (int i = 0; i < all.Count; i++)
             {
                 int idx = ((start + i) & int.MaxValue) % all.Count;
-                if (accept(result, all[idx]))
+                if (Accept(result, all[idx]))
                 {
                     result.Add(all[idx]);
                     if (++found >= maxAttemptTimes)
@@ -115,6 +115,6 @@ namespace Org.Apache.Rocketmq
 
         private List<rmq::MessageQueue> _messageQueues;
 
-        private int roundRobinIndex;
+        private int _roundRobinIndex;
     }
 }

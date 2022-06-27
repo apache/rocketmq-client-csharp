@@ -219,7 +219,7 @@ namespace Org.Apache.Rocketmq
         {
             var msg = new Message();
             msg.Topic = message.Topic.Name;
-            msg.messageId = message.SystemProperties.MessageId;
+            msg.MessageId = message.SystemProperties.MessageId;
             msg.Tag = message.SystemProperties.Tag;
 
             // Validate message body checksum
@@ -229,7 +229,7 @@ namespace Org.Apache.Rocketmq
                 uint checksum = Force.Crc32.Crc32Algorithm.Compute(raw, 0, raw.Length);
                 if (!message.SystemProperties.BodyDigest.Checksum.Equals(checksum.ToString("X")))
                 {
-                    msg._bodyChecksumVerified = false;
+                    msg._checksumVerifiedOk = false;
                 }
             }
             else if (rmq::DigestType.Md5 == message.SystemProperties.BodyDigest.Type)
@@ -237,7 +237,7 @@ namespace Org.Apache.Rocketmq
                 var checksum = MD5.HashData(raw);
                 if (!message.SystemProperties.BodyDigest.Checksum.Equals(System.Convert.ToHexString(checksum)))
                 {
-                    msg._bodyChecksumVerified = false;
+                    msg._checksumVerifiedOk = false;
                 }
             }
             else if (rmq::DigestType.Sha1 == message.SystemProperties.BodyDigest.Type)
@@ -245,7 +245,7 @@ namespace Org.Apache.Rocketmq
                 var checksum = SHA1.HashData(raw);
                 if (!message.SystemProperties.BodyDigest.Checksum.Equals(System.Convert.ToHexString(checksum)))
                 {
-                    msg._bodyChecksumVerified = false;
+                    msg._checksumVerifiedOk = false;
                 }
             }
 
@@ -262,7 +262,7 @@ namespace Org.Apache.Rocketmq
                 msg.Keys.Add(key);
             }
 
-            msg._deliveryAttempt = message.SystemProperties.DeliveryAttempt;
+            msg.DeliveryAttempt = message.SystemProperties.DeliveryAttempt;
 
             if (message.SystemProperties.BodyEncoding == rmq::Encoding.Gzip)
             {

@@ -38,11 +38,14 @@ namespace Org.Apache.Rocketmq
         }
 
         [TestMethod]
-        public async Task testSendMessage()
+        public async Task TestSendMessage()
         {
-            var accessPoint = new AccessPoint();
-            accessPoint.Host = host;
-            accessPoint.Port = port;
+            var accessPoint = new AccessPoint
+            {
+                Host = HOST,
+                Port = PORT
+            };
+            
             var producer = new Producer(accessPoint, resourceNamespace);
             producer.CredentialsProvider = new ConfigFileCredentialsProvider();
             producer.Region = "cn-hangzhou-pre";
@@ -60,8 +63,8 @@ namespace Org.Apache.Rocketmq
         private static string topic = "cpp_sdk_standard";
 
         private static ICredentialsProvider credentialsProvider;
-        private static string host = "11.166.42.94";
-        private static int port = 8081;
+        private static string HOST = "127.0.0.1";
+        private static int PORT = 8081;
     }
 
 }
