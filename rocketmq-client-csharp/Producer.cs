@@ -34,7 +34,7 @@ namespace Org.Apache.Rocketmq
         public Producer(AccessPoint accessPoint, string resourceNamespace) : base(accessPoint, resourceNamespace)
         {
             _loadBalancer = new ConcurrentDictionary<string, PublishLoadBalancer>();
-            _sendFailureTotal = MetricMeter.CreateCounter<UInt64>("rocketmq_send_failure_total");
+            _sendFailureTotal = MetricMeter.CreateCounter<long>("rocketmq_send_failure_total");
             _sendLatency = MetricMeter.CreateHistogram<double>("rocketmq_send_success_cost_time", 
                 description: "Measure the duration of publishing messages to brokers",
                 unit: "milliseconds");
@@ -174,7 +174,7 @@ namespace Org.Apache.Rocketmq
 
         private readonly ConcurrentDictionary<string, PublishLoadBalancer> _loadBalancer;
 
-        private readonly Counter<UInt64> _sendFailureTotal;
+        private readonly Counter<long> _sendFailureTotal;
         private readonly Histogram<double> _sendLatency;
     }
 }
