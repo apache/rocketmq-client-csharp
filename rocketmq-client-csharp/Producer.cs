@@ -26,7 +26,9 @@ using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using NLog;
+using OpenTelemetry;
 using OpenTelemetry.Exporter;
+using OpenTelemetry.Metrics;
 
 namespace Org.Apache.Rocketmq
 {
@@ -35,10 +37,8 @@ namespace Org.Apache.Rocketmq
         public Producer(AccessPoint accessPoint, string resourceNamespace) : base(accessPoint, resourceNamespace)
         {
             _loadBalancer = new ConcurrentDictionary<string, PublishLoadBalancer>();
-            _otlpExporterOptions = new OtlpExporterOptions();
-            _otlpExporterOptions.Protocol = OtlpExportProtocol.Grpc;
             _sendFailureTotal = MetricMeter.CreateCounter<long>("rocketmq_send_failure_total");
-            _sendLatency = MetricMeter.CreateHistogram<double>("rocketmq_send_success_cost_time", 
+            _sendLatency = MetricMeter.CreateHistogram<double>(SendLatencyName, 
                 description: "Measure the duration of publishing messages to brokers",
                 unit: "milliseconds");
         }
@@ -47,9 +47,30 @@ namespace Org.Apache.Rocketmq
         {
             await base.Start();
             // More initialization
-            _otlpExporterOptions.TimeoutMilliseconds = (int)_clientSettings.RequestTimeout.ToTimeSpan().TotalMilliseconds;
-            _otlpExporterOptions.Endpoint = new(_accessPoint.TargetUrl());
             // TODO: Add authentication header
+
+            _meterProvider = Sdk.CreateMeterProviderBuilder()
+                .AddMeter("Apache.RocketMQ.Client")
+                .AddOtlpExporter(delegate(OtlpExporterOptions options, MetricReaderOptions readerOptions)
+                {
+                    options.Protocol = OtlpExportProtocol.Grpc;
+                    options.Endpoint = new Uri(_accessPoint.TargetUrl());
+                    options.TimeoutMilliseconds = (int) _clientSettings.RequestTimeout.ToTimeSpan().TotalMilliseconds;
+
+                    readerOptions.PeriodicExportingMetricReaderOptions.ExportIntervalMilliseconds = 60 * 1000;
+                })
+                .AddView((instrument) =>
+                {
+                    if (instrument.Meter.Name == MeterName && instrument.Name == SendLatencyName)
+                    {
+                        return new ExplicitBucketHistogramConfiguration()
+                        {
+                            Boundaries = new double[] {1, 5, 10, 20, 50, 200, 500},
+                        };
+                    }
+                    return null;
+                })
+                .Build();
         }
 
         public override async Task Shutdown()
@@ -182,6 +203,8 @@ namespace Org.Apache.Rocketmq
 
         private readonly Counter<long> _sendFailureTotal;
         private readonly Histogram<double> _sendLatency;
-        private readonly OtlpExporterOptions _otlpExporterOptions;
+
+        private static readonly string SendLatencyName = "rocketmq_send_success_cost_time";
+        private MeterProvider _meterProvider;
     }
 }

@@ -488,6 +488,8 @@ namespace Org.Apache.Rocketmq
         
         protected readonly ConcurrentDictionary<string, Session> _sessions = new ConcurrentDictionary<string, Session>();
 
-        protected static readonly Meter MetricMeter = new("Apache.RocketMQ.Client", "1.0");
+        public static readonly string MeterName = "Apache.RocketMQ.Client";
+        
+        protected static readonly Meter MetricMeter = new(MeterName, "1.0");
     }
 }
