@@ -20,6 +20,8 @@ using System.Threading.Tasks;
 using rmq = Apache.Rocketmq.V2;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
@@ -32,6 +34,10 @@ namespace Org.Apache.Rocketmq
         public Producer(AccessPoint accessPoint, string resourceNamespace) : base(accessPoint, resourceNamespace)
         {
             _loadBalancer = new ConcurrentDictionary<string, PublishLoadBalancer>();
+            _sendFailureTotal = MetricMeter.CreateCounter<UInt64>("rocketmq_send_failure_total");
+            _sendLatency = MetricMeter.CreateHistogram<double>("rocketmq_send_success_cost_time", 
+                description: "Measure the duration of publishing messages to brokers",
+                unit: "milliseconds");
         }
 
         public override async Task Start()
@@ -132,16 +138,25 @@ namespace Org.Apache.Rocketmq
             {
                 try
                 {
+                    var stopWatch = new Stopwatch();
+                    stopWatch.Start();
                     rmq::SendMessageResponse response = await Manager.SendMessage(target, metadata, request, RequestTimeout);
                     if (null != response && rmq::Code.Ok == response.Status.Code)
                     {
-
                         var messageId = response.Entries[0].MessageId;
+                        
+                        // Account latency histogram
+                        stopWatch.Stop();
+                        var latency = stopWatch.ElapsedMilliseconds;
+                        _sendLatency.Record(latency, new("topic", message.Topic), new("client_id", clientId()));
+                        
                         return new SendReceipt(messageId);
                     }
                 }
                 catch (Exception e)
                 {
+                    // Account failure count
+                    _sendFailureTotal.Add(1, new("topic", message.Topic), new("client_id", clientId()));                    
                     Logger.Info(e, $"Failed to send message to {target}");
                     ex = e;
                 }
@@ -158,5 +173,8 @@ namespace Org.Apache.Rocketmq
         }
 
         private readonly ConcurrentDictionary<string, PublishLoadBalancer> _loadBalancer;
+
+        private readonly Counter<UInt64> _sendFailureTotal;
+        private readonly Histogram<double> _sendLatency;
     }
 }

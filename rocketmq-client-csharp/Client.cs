@@ -24,6 +24,9 @@ using System;
 using rmq = Apache.Rocketmq.V2;
 using grpc = global::Grpc.Core;
 using NLog;
+using System.Diagnostics.Metrics;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
 
 
 namespace Org.Apache.Rocketmq
@@ -235,7 +238,7 @@ namespace Org.Apache.Rocketmq
 
             var metadata = new grpc.Metadata();
             Signature.sign(this, metadata);
-            int index = random.Next(0, AccessPointEndpoints.Count);
+            int index = _random.Next(0, AccessPointEndpoints.Count);
             var serviceEndpoint = AccessPointEndpoints[index];
             // AccessPointAddresses.Count
             string target = $"https://{serviceEndpoint.Host}:{serviceEndpoint.Port}";
@@ -481,8 +484,10 @@ namespace Org.Apache.Rocketmq
         // This field is subject changes from servers.
         protected readonly rmq::Settings _clientSettings;
 
-        private readonly Random random = new Random();
+        private readonly Random _random = new Random();
         
         protected readonly ConcurrentDictionary<string, Session> _sessions = new ConcurrentDictionary<string, Session>();
+
+        protected static readonly Meter MetricMeter = new("Apache.RocketMQ.Client", "1.0");
     }
 }
