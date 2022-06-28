@@ -26,6 +26,7 @@ using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using NLog;
+using OpenTelemetry.Exporter;
 
 namespace Org.Apache.Rocketmq
 {
@@ -34,6 +35,8 @@ namespace Org.Apache.Rocketmq
         public Producer(AccessPoint accessPoint, string resourceNamespace) : base(accessPoint, resourceNamespace)
         {
             _loadBalancer = new ConcurrentDictionary<string, PublishLoadBalancer>();
+            _otlpExporterOptions = new OtlpExporterOptions();
+            _otlpExporterOptions.Protocol = OtlpExportProtocol.Grpc;
             _sendFailureTotal = MetricMeter.CreateCounter<long>("rocketmq_send_failure_total");
             _sendLatency = MetricMeter.CreateHistogram<double>("rocketmq_send_success_cost_time", 
                 description: "Measure the duration of publishing messages to brokers",
@@ -44,6 +47,9 @@ namespace Org.Apache.Rocketmq
         {
             await base.Start();
             // More initialization
+            _otlpExporterOptions.TimeoutMilliseconds = (int)_clientSettings.RequestTimeout.ToTimeSpan().TotalMilliseconds;
+            _otlpExporterOptions.Endpoint = new(_accessPoint.TargetUrl());
+            // TODO: Add authentication header
         }
 
         public override async Task Shutdown()
@@ -176,5 +182,6 @@ namespace Org.Apache.Rocketmq
 
         private readonly Counter<long> _sendFailureTotal;
         private readonly Histogram<double> _sendLatency;
+        private readonly OtlpExporterOptions _otlpExporterOptions;
     }
 }
